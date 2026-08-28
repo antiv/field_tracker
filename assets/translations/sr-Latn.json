@@ -86,7 +86,7 @@
   "markers": "Markeri",
   "distance": "Distanca",
   "time": "Vreme",
-  "csv": {
+  "csv_header": {
     "species": "Vrsta",
     "date": "Datum",
     "observed_at": "Datum posmatranja",
@@ -108,6 +108,7 @@
     "point": "Tačka"
   },
   "kml": "KML",
+  "csv": "CSV",
   "no_transects_yet": "Još nema transekata.",
   "close": "ZATVORI",
   "transect_info": "Info o transektu",

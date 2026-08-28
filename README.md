@@ -1,6 +1,6 @@
 # Herp Tracker
 
-Herp Tracker is a Flutter app (Android + iOS) for field surveys of reptiles and amphibians. You
+Herp Tracker is a Flutter app (Android + iOS) for field surveys of reptiles and amphibians (herpetofauna). You
 record a transect (survey route) on a Google Map, drop a point wherever you find an animal, and
 attach one observation record per finding — species, locality, development stage, sex, number of
 individuals, habitat and more. Recorded surveys can be exported and shared as CSV or KML, and the

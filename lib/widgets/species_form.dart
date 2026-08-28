@@ -161,24 +161,27 @@ class _SpeciesFormState extends State<SpeciesForm> {
                   ),
                   textCapitalization: TextCapitalization.sentences,
                 ),
-                const SizedBox(height: 4),
-                EnumRadio(
-                  key: ValueKey('stage$_stage'),
-                  enumValues: DevelopmentStage.values,
+                const SizedBox(height: 12),
+                OptionPicker<DevelopmentStage>(
+                  label: 'fields.stage'.tr(),
+                  options: DevelopmentStage.values,
                   value: _stage,
                   onChanged: (val) => setState(() => _stage = val),
-                  label: 'fields.stage'.tr(),
-                  customLabels: _labels(DevelopmentStage.values),
+                  icon: Icons.egg_outlined,
                 ),
+                const SizedBox(height: 12),
+
+                /// only three values, so radios stay quicker than a dropdown
                 EnumRadio(
                   key: ValueKey('sex$_sex'),
                   enumValues: Sex.values,
                   value: _sex,
                   onChanged: (val) => setState(() => _sex = val),
                   label: 'fields.sex'.tr(),
+                  icon: Icons.wc_outlined,
                   customLabels: _labels(Sex.values),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

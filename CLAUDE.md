@@ -26,6 +26,10 @@ fvm flutter build ios --no-codesign   # verify iOS compiles
 - **Android**: `./build_release.sh [--bump]` — cleans, builds obfuscated appbundle, copies to `herp_tracker.aab` at repo root. `--bump` increments patch+build in pubspec.
 - **iOS**: `./deploy_ios.sh` — full build + signed export + upload to App Store Connect via API key. **Bumps version by default**; use `--no-bump` if the version was already bumped, `--no-upload` to only produce the .ipa. Requires `ios/deploy.env` (see `ios/deploy.env.example`). The script patches the generated SPM `Package.swift` from iOS 13 → 14 (required by file_picker) before building — don't "fix" that seemingly redundant sed.
 
+### Launcher icon
+
+Sources live in `launcher_icon/` (outside `assets/`, so they are not bundled into the app): `app_icon.png` is the full-bleed 1024×1024 square used for iOS, the Android legacy icon and the Play listing, `app_icon_foreground.png` is the artwork alone on transparency, pre-padded to 62% of the canvas for the Android adaptive icon's safe zone. Neither may have rounded corners — iOS and Android apply their own mask, so a rounded source leaves white corners. Regenerate the platform sets with `fvm dart run flutter_launcher_icons` after changing either file; the plate colour `#8BBC53` is repeated in `flutter_launcher_icons.yaml` (adaptive background) and lands in `android/app/src/main/res/values/colors.xml`.
+
 Version format in pubspec.yaml is `X.Y.Z+N`; both scripts bump patch and build number together. Apple requires a new build number for every App Store Connect upload.
 
 ## Configuration / secrets (not in git)
@@ -49,6 +53,6 @@ Single-screen app: `lib/home_page.dart` hosts the Google Map and drives everythi
 
 ## Localization — keep three places in sync
 
-1. **App strings**: easy_localization with `assets/translations/en.json` and `sr-Latn.json`; supported locales `en` and `sr-Latn`, fallback `en` (`lib/main.dart`). Any new UI string needs a key in **both** JSON files. This includes anything data-driven: a new species needs a `species.<latin>` entry, a new enum value needs one under its block (`stage`, `sex`, `data_type`, `method`, `habitat`, `water_bed`), and a new export column needs one under `csv`.
+1. **App strings**: easy_localization with `assets/translations/en.json` and `sr-Latn.json`; supported locales `en` and `sr-Latn`, fallback `en` (`lib/main.dart`). Any new UI string needs a key in **both** JSON files. This includes anything data-driven: a new species needs a `species.<latin>` entry, a new enum value needs one under its block (`stage`, `sex`, `data_type`, `method`, `habitat`, `water_bed`), and a new export column needs one under `csv_header` (that block is deliberately not named `csv` — a block and a plain key cannot share a name, and `csv` is the label of the share button in the history sheet; `.tr()` on a block key throws a Map cast error at build time).
 2. **iOS permission strings**: `ios/Runner/Info.plist` holds the English (default) `NSLocation*UsageDescription` values; localized overrides live in `ios/Runner/{en,sr-Latn,sr}.lproj/InfoPlist.strings` (registered as a variant group in project.pbxproj). If a permission string changes, update the plist **and all three** .strings files — Apple rejected the app once (Guideline 4) for permission prompts not matching the app's language.
 3. **Android**: permission dialogs are system-provided; no strings to maintain.

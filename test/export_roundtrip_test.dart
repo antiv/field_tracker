@@ -78,6 +78,11 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
+    /// the CSV/KML share buttons use these as plain labels — nesting a block
+    /// under the same key makes .tr() hand back a Map and the widget throws
+    expect('csv'.tr(), 'CSV');
+    expect('kml'.tr(), 'KML');
+
     final transect = buildTransect();
 
     // ── CSV ──────────────────────────────────────────────────────────────

@@ -1,16 +1,22 @@
 # Konfiguracija ikonice aplikacije (flutter_launcher_icons).
+# Izvori su u launcher_icon/ (nisu deo Flutter asset-a, ne pakuju se u app):
+#   app_icon.png            — pun kvadrat bez zaobljenih uglova; iOS i Android
+#                             sistem sami primenjuju masku, pa zaobljenje u
+#                             izvoru ostavlja bele uglove
+#   app_icon_foreground.png — samo crtež na providnoj podlozi, unutar sigurne
+#                             zone adaptivne ikonice (62% platna)
 # Generiši:  fvm dart run flutter_launcher_icons
 flutter_launcher_icons:
-  image_path: "android/app/src/main/ic_launcher-playstore.png"
+  image_path: "launcher_icon/app_icon.png"
 
   android: true
   ios: true
 
-  # iOS ne sme alfu/providnost — poravnaj na belu pozadinu.
+  # iOS ne sme alfu/providnost — izvor je već bez nje.
   remove_alpha_ios: true
-  background_color_ios: "#FFFFFF"
+  background_color_ios: "#8BBC53"
 
   # Android adaptive icon (Android 8+).
-  adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "android/app/src/main/ic_launcher-playstore.png"
+  adaptive_icon_background: "#8BBC53"
+  adaptive_icon_foreground: "launcher_icon/app_icon_foreground.png"
   min_sdk_android: 23

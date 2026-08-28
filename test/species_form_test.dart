@@ -97,7 +97,9 @@ void main() {
         startLocale: const Locale('sr', 'Latn'));
 
     expect(find.text('Lokalitet'), findsOneWidget);
-    expect(find.text('juvenilna jedinka'), findsOneWidget);
+    expect(find.text('Razvojni stadijum'), findsOneWidget);
+    // sex is the one list still shown as radios — all three fit on one line
+    expect(find.text('oba'), findsOneWidget);
     expect(find.text('Opseg brojnosti'), findsOneWidget);
 
     await tester.tap(find.text('Napredno'));

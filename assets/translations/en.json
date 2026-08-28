@@ -86,7 +86,7 @@
   "markers": "Markers",
   "distance": "Distance",
   "time": "Time",
-  "csv": {
+  "csv_header": {
     "species": "Species",
     "date": "Date",
     "observed_at": "Observation date",
@@ -108,6 +108,7 @@
     "point": "Point"
   },
   "kml": "KML",
+  "csv": "CSV",
   "no_transects_yet": "No transects yet.",
   "close": "CLOSE",
   "transect_info": "Transect Info",
