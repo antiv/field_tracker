@@ -1,0 +1,3 @@
+"NSLocationWhenInUseUsageDescription" = "The app uses your location while in use to show your current position on the map and to record the locations of reptile and amphibian observations.";
+"NSLocationAlwaysAndWhenInUseUsageDescription" = "The app uses your location in the background to track your route during a herpetofauna transect survey, even when the screen is locked or the app is not active.";
+"NSLocationAlwaysUsageDescription" = "The app uses your location in the background to track your route during a herpetofauna transect survey, even when the screen is locked or the app is not active.";

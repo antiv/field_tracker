@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(plutil -p /Users/ivanantonijevic/development/reptiles_amphibians/build/ios/iphoneos/Runner.app/Info.plist)",
+      "Bash(grep -iA5 \"Localizations\\\\|BundleVersion\\\\|ShortVersion\")",
+      "Bash(plutil -p /Users/ivanantonijevic/development/reptiles_amphibians/build/ios/iphoneos/Runner.app/sr-Latn.lproj/InfoPlist.strings)",
+      "Bash(python3 -m json.tool /Users/ivanantonijevic/development/reptiles_amphibians/assets/translations/en.json)",
+      "Bash(python3 -m json.tool /Users/ivanantonijevic/development/reptiles_amphibians/assets/translations/sr-Latn.json)",
+      "Bash(/Users/ivanantonijevic/fvm/versions/stable/bin/flutter analyze *)",
+      "Bash(fvm flutter *)",
+      "Bash(python3 -c ' *)",
+      "Bash(python3 -c \"import pypdf\")",
+      "Bash(python3 -c \"import PyPDF2\")",
+      "Bash(python3 -c \"import fitz\")",
+      "Bash(python3 -c \"import pdfplumber\")",
+      "Bash(pip3 install *)",
+      "Bash(python3)",
+      "Bash(python3 -c \"import openpyxl; print\\('openpyxl ok'\\)\")",
+      "Bash(./build_release.sh --bump)",
+      "Bash(echo \"--- exit $? ---\")",
+      "Bash(git rm *)",
+      "Bash(~/fvm/versions/stable/bin/flutter --version)",
+      "Bash(~/fvm/versions/stable/bin/flutter pub *)",
+      "Bash(~/fvm/versions/stable/bin/flutter analyze *)",
+      "Bash(~/fvm/versions/stable/bin/flutter test *)"
+    ]
+  }
+}

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <g fill="#0F9D58" stroke="#0F9D58" stroke-linecap="round" stroke-linejoin="round">
+    <!-- tail, drawn in three segments so it tapers toward the tip -->
+    <path d="M64 68 C 64 86, 68 98, 80 103" fill="none" stroke-width="12"/>
+    <path d="M80 103 C 92 108, 103 103, 104 92" fill="none" stroke-width="8"/>
+    <path d="M104 92 C 105 85, 101 81, 96 82" fill="none" stroke-width="5"/>
+    <!-- front legs -->
+    <path d="M54 40 L 38 30 L 30 33" fill="none" stroke-width="8"/>
+    <path d="M74 40 L 90 30 L 98 33" fill="none" stroke-width="8"/>
+    <!-- hind legs -->
+    <path d="M54 66 L 38 76 L 30 73" fill="none" stroke-width="8"/>
+    <path d="M74 66 L 90 76 L 98 73" fill="none" stroke-width="8"/>
+    <!-- body -->
+    <ellipse cx="64" cy="52" rx="15" ry="24"/>
+    <!-- head -->
+    <ellipse cx="64" cy="24" rx="14" ry="12"/>
+  </g>
+</svg>

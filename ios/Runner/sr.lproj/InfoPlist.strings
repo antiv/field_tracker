@@ -1,0 +1,3 @@
+"NSLocationWhenInUseUsageDescription" = "Aplikacija koristi lokaciju u toku rada za prikaz vaše trenutne pozicije na mapi i beleženje lokacija nalaza gmizavaca i vodozemaca.";
+"NSLocationAlwaysAndWhenInUseUsageDescription" = "Aplikacija koristi lokaciju u pozadini kako bi pratila vašu putanju kretanja tokom transektnog popisa gmizavaca i vodozemaca, čak i kada je ekran zaključan ili aplikacija nije aktivna.";
+"NSLocationAlwaysUsageDescription" = "Aplikacija koristi lokaciju u pozadini kako bi pratila vašu putanju kretanja tokom transektnog popisa gmizavaca i vodozemaca, čak i kada je ekran zaključan ili aplikacija nije aktivna.";
