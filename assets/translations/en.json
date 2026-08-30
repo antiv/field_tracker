@@ -77,7 +77,7 @@
   "set_email": "Set email address",
   "email_dialog_title": "Enter email address to send track data",
   "email_dialog_hint": "Enter email address",
-  "import_kml": "Import KML",
+  "import_map": "Import KML / KMZ",
   "backup_data": "Backup Data",
   "restore_data": "Restore Data",
   "privacy_policy": "Privacy Policy",
@@ -105,9 +105,11 @@
     "abundance": "Abundance range",
     "note": "Note",
     "transect": "Transect",
-    "point": "Point"
+    "point": "Point",
+    "photos": "Photos"
   },
   "kml": "KML",
+  "kmz": "KMZ",
   "csv": "CSV",
   "no_transects_yet": "No transects yet.",
   "close": "CLOSE",
@@ -127,6 +129,8 @@
   "add_species": "Add record",
   "edit_species_title": "Edit record",
   "are_you_sure": "Are you sure?",
+  "delete_photos_too": "Also delete the photos ({})",
+  "delete_photos_hint": "Photos taken with the app stay in the Herp Tracker gallery album. Photos that arrived through an import or a restore do not.",
   "yes": "Yes",
   "no": "No",
   "confirm": "Confirm",
@@ -243,5 +247,12 @@
     "muddy": "Muddy",
     "mixed": "Mixed",
     "other": "Other"
-  }
+  },
+  "photos": "Photos",
+  "add_photo_camera": "Camera",
+  "add_photo_gallery": "Gallery",
+  "delete_photo": "Remove this photo?",
+  "photo_camera_failed": "Could not take the photo",
+  "photo_gallery_pick_failed": "Could not open the gallery",
+  "photo_gallery_failed": "Photo saved to the record, but not to the gallery"
 }

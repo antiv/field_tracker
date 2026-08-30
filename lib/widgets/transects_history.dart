@@ -111,7 +111,9 @@ class _TransectsHistoryState extends State<TransectsHistory> {
                                         minimumSize: Size.zero,
                                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                       ),
-                                      label: Text('kml'.tr(), style: const TextStyle(fontSize: 11)),
+                                      label: Text(
+                                          transects[index].hasPhotos ? 'kmz'.tr() : 'kml'.tr(),
+                                          style: const TextStyle(fontSize: 11)),
                                     ),
                                   ),
                                 ]),
@@ -120,12 +122,13 @@ class _TransectsHistoryState extends State<TransectsHistory> {
                           isThreeLine: true,
                           trailing: IconButton(
                             onPressed: () {
-                              showYesNoDialog(() {
+                              showDeleteWithPhotosDialog(
+                                  transects[index].photoNames, (_) {
                                 SembastService().deleteTransect(transects[index]);
                                 setState(() {
                                   transects.removeAt(index);
                                 });
-                              }, () {});
+                              });
                             },
                             icon: const Icon(Icons.delete),
                           )),

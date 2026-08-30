@@ -77,7 +77,7 @@
   "set_email": "Podesi e-mail adresu",
   "email_dialog_title": "Unesite e-mail adresu za slanje podataka",
   "email_dialog_hint": "Unesite e-mail adresu",
-  "import_kml": "Uvezi KML",
+  "import_map": "Uvezi KML / KMZ",
   "backup_data": "Rezervna kopija",
   "restore_data": "Povrati podatke",
   "privacy_policy": "Politika privatnosti",
@@ -105,9 +105,11 @@
     "abundance": "Opseg brojnosti",
     "note": "Napomena",
     "transect": "Transekt",
-    "point": "Tačka"
+    "point": "Tačka",
+    "photos": "Fotografije"
   },
   "kml": "KML",
+  "kmz": "KMZ",
   "csv": "CSV",
   "no_transects_yet": "Još nema transekata.",
   "close": "ZATVORI",
@@ -127,6 +129,8 @@
   "add_species": "Dodaj zapis",
   "edit_species_title": "Izmeni zapis",
   "are_you_sure": "Da li ste sigurni?",
+  "delete_photos_too": "Obriši i fotografije ({})",
+  "delete_photos_hint": "Fotografije snimljene aplikacijom ostaju u albumu „Herp Tracker“. One koje su stigle importom ili vraćanjem iz backup-a ne ostaju.",
   "yes": "Da",
   "no": "Ne",
   "confirm": "Potvrdi",
@@ -243,5 +247,12 @@
     "muddy": "muljevito",
     "mixed": "mešovito",
     "other": "drugo"
-  }
+  },
+  "photos": "Fotografije",
+  "add_photo_camera": "Kamera",
+  "add_photo_gallery": "Galerija",
+  "delete_photo": "Ukloniti ovu fotografiju?",
+  "photo_camera_failed": "Fotografisanje nije uspelo",
+  "photo_gallery_pick_failed": "Galerija se ne može otvoriti",
+  "photo_gallery_failed": "Fotografija je sačuvana uz zapis, ali ne i u galeriju"
 }

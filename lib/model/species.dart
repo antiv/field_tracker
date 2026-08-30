@@ -26,6 +26,10 @@ class Species {
   WaterBedType? waterBed;
   String? note;
 
+  /// File names only, never paths — the app documents directory moves between
+  /// installs on iOS. Resolve through [MediaService.fileFor] when reading.
+  List<String> photos = [];
+
   Map<String, dynamic> toJson() => {
         'species': species,
         'observedAt': observedAt.toIso8601String(),
@@ -39,6 +43,7 @@ class Species {
         'habitat': habitat?.name,
         'waterBed': waterBed?.name,
         'note': note,
+        'photos': photos,
       };
 
   static Species fromJson(Map<String, dynamic> json) => Species()
@@ -60,7 +65,8 @@ class Species {
         HabitatType.values.firstWhereOrNull((e) => e.name == json['habitat'])
     ..waterBed =
         WaterBedType.values.firstWhereOrNull((e) => e.name == json['waterBed'])
-    ..note = json['note'] as String?;
+    ..note = json['note'] as String?
+    ..photos = (json['photos'] as List<dynamic>?)?.cast<String>().toList() ?? [];
 
   /// Localized one-line summary, used in lists and in the KML description.
   String get speciesString {

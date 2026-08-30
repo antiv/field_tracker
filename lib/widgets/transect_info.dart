@@ -65,17 +65,18 @@ class _TransectInfoState extends State<TransectInfo> {
                       trailing: IconButton(
                         icon: const Icon(Icons.delete),
                         onPressed: () {
-                          /// Ask for confirmation, and delete the marker
-                          showYesNoDialog(
-                              () => setState(() {
+                          /// Ask for confirmation — and, when the point holds
+                          /// photos, whether those files should go too
+                          showDeleteWithPhotosDialog(
+                              current?.markers?[index].photoNames ?? const [],
+                              (_) => setState(() {
                                     current?.markers = current.markers
                                             ?.toList(growable: true) ??
                                         [];
                                     current?.markers?.removeAt(index);
                                     SembastService().updateTransect(current!);
                                     DataService().notify();
-                                  }),
-                              () {});
+                                  }));
                         },
                       ),
                       onTap: () {

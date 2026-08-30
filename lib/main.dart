@@ -2,6 +2,7 @@ import 'package:herp_tracker/service/data_service.dart';
 import 'package:context_holder/context_holder.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:herp_tracker/service/media_service.dart';
 import 'package:provider/provider.dart';
 
 import 'configuration/constants.dart';
@@ -13,6 +14,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: '.env');
   await EasyLocalization.ensureInitialized();
+  await MediaService().init();
   runApp(ChangeNotifierProvider(
       create: (BuildContext context) => DataService(),
       child: EasyLocalization(

@@ -1,3 +1,6 @@
 "NSLocationWhenInUseUsageDescription" = "Aplikacija koristi lokaciju u toku rada za prikaz vaše trenutne pozicije na mapi i beleženje lokacija nalaza gmizavaca i vodozemaca.";
 "NSLocationAlwaysAndWhenInUseUsageDescription" = "Aplikacija koristi lokaciju u pozadini kako bi pratila vašu putanju kretanja tokom transektnog popisa gmizavaca i vodozemaca, čak i kada je ekran zaključan ili aplikacija nije aktivna.";
 "NSLocationAlwaysUsageDescription" = "Aplikacija koristi lokaciju u pozadini kako bi pratila vašu putanju kretanja tokom transektnog popisa gmizavaca i vodozemaca, čak i kada je ekran zaključan ili aplikacija nije aktivna.";
+"NSCameraUsageDescription" = "Aplikacija koristi kameru kako biste fotografisali pronađenog gmizavca ili vodozemca i priložili fotografiju uz zapis nalaza.";
+"NSPhotoLibraryAddUsageDescription" = "Aplikacija čuva fotografije koje snimite u albumu „Herp Tracker“ u vašoj galeriji, kako bi terenske fotografije bile dostupne i van aplikacije.";
+"NSPhotoLibraryUsageDescription" = "Aplikaciji je potreban pristup galeriji kako biste postojeće fotografije priložili uz zapis nalaza i kako bi ih čuvala u albumu „Herp Tracker“.";

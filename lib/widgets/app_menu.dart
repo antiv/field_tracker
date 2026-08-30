@@ -118,10 +118,10 @@ class AppMenu extends StatelessWidget {
                 ListTile(
                   leading:
                       const Icon(Icons.file_open_outlined, color: Colors.green),
-                  title: Text('import_kml'.tr()),
+                  title: Text('import_map'.tr()),
                   onTap: () {
                     Navigator.pop(context);
-                    showImportKMLDialog();
+                    showImportDialog();
                   },
                 ),
                 ListTile(

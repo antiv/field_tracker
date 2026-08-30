@@ -2,6 +2,7 @@
 import 'dart:convert';
 import 'dart:developer';
 
+import 'package:easy_localization/easy_localization.dart';
 import 'package:herp_tracker/model/species.dart';
 import 'package:herp_tracker/model/transect.dart';
 import 'package:xml/xml.dart';
@@ -10,7 +11,24 @@ import '../model/placemark.dart';
 import '../model/point.dart';
 
 /// Name of the ExtendedData entry carrying the machine-readable records.
+///
+/// The payload used to be a plain `<Data name="records">`, which viewers
+/// render as a name/value table — Google My Maps showed the raw JSON to the
+/// user. KML 2.2 lets ExtendedData hold arbitrary namespaced content that
+/// renderers must ignore, so it now travels under [kHerpNamespace] instead.
+/// The old form is still read, or every KML already shared with a colleague
+/// would stop importing.
 const String kRecordsDataName = 'records';
+
+/// Namespace for this app's private ExtendedData payload.
+const String kHerpNamespace = 'https://antonijevic.rs/herp_tracker';
+const String kHerpPrefix = 'herp';
+
+/// Folder KMZ archives keep their photos in, and the prefix `<img src>` uses.
+const String kKmzFilesDir = 'files';
+
+/// The KML entry inside a KMZ archive.
+const String kKmzDocName = 'doc.kml';
 
 class KMLUtils {
   static final KMLUtils _singleton = KMLUtils._internal();
@@ -21,11 +39,17 @@ class KMLUtils {
 
   KMLUtils._internal();
 
-  static String generateKML(Transect transect) {
+  /// [photos] are the file names a KMZ actually bundles. When given, the
+  /// placemark description becomes HTML referencing `files/<name>`; a photo
+  /// missing from that list is left out rather than rendered as a broken
+  /// image. A plain .kml passes nothing and keeps the text description.
+  static String generateKML(Transect transect, {List<String>? photos}) {
+    final bundled = photos?.toSet() ?? const <String>{};
     final builder = XmlBuilder();
     builder.processing('xml', 'version="1.0" encoding="UTF-8"');
     builder.element('kml', nest: () {
       builder.attribute('xmlns', 'http://www.opengis.net/kml/2.2');
+      builder.namespaceUri(kHerpPrefix, kHerpNamespace);
       builder.element('Document', nest: () {
         builder.element('name', nest: () {
           builder.text('${transect.name}');
@@ -71,6 +95,7 @@ class KMLUtils {
               builder.text('1.0');
             });
           });
+
         });
 
         /// add placemarks from transect.markers
@@ -84,24 +109,56 @@ class KMLUtils {
               builder.text('Point ${marker.id! + 1}');
             });
             builder.element('description', nest: () {
-              builder.text(marker.speciesString);
+              if (bundled.isNotEmpty) {
+                builder.cdata(_htmlDescription(marker, bundled));
+              } else {
+                builder.text(marker.speciesString);
+              }
             });
 
-            /// The description is for humans (Google Earth); re-import reads
-            /// this payload instead, so no field survives only as prose.
             builder.element('ExtendedData', nest: () {
-              builder.element('Data', nest: () {
-                builder.attribute('name', kRecordsDataName);
-                builder.element('value', nest: () {
-                  builder.text(jsonEncode({
-                    'altitude': marker.altitude,
-                    'accuracy': marker.accuracy,
-                    'startDate': marker.startDate?.toIso8601String(),
-                    'endDate': marker.endDate?.toIso8601String(),
-                    'species':
-                        marker.species?.map((s) => s.toJson()).toList() ?? [],
-                  }));
+              /// One <Data> per field: that is what a viewer renders as the
+              /// name/value table in the balloon. The description alone is a
+              /// one-line summary, and a KML reader has no other way to show
+              /// the rest of a record.
+              final records = marker.species ?? <Species>[];
+              for (var i = 0; i < records.length; i++) {
+                /// a point can hold several findings — number them, or the
+                /// table would repeat "Species" with no way to tell the
+                /// rows apart
+                final prefix = records.length > 1 ? '${i + 1}. ' : '';
+                final values = marker.exportValues(records[i]);
+                for (var c = 0; c < kRecordColumnKeys.length; c++) {
+                  builder.element('Data', nest: () {
+                    builder.attribute(
+                        'name', '$prefix${kRecordColumnKeys[c].tr()}');
+                    builder.element('value', nest: () {
+                      builder.text(values[c]);
+                    });
+                  });
+                }
+                builder.element('Data', nest: () {
+                  builder.attribute('name', '$prefix${'csv_header.photos'.tr()}');
+                  builder.element('value', nest: () {
+                    builder.text(records[i].photos.join('; '));
+                  });
                 });
+              }
+
+              /// The rows above are for humans and lose the enum names and
+              /// the exact timestamps; re-import reads this payload instead,
+              /// so no field survives only as a label. Namespaced, so viewers
+              /// skip it rather than printing the JSON at the user.
+              builder.element(kRecordsDataName, namespaceUri: kHerpNamespace,
+                  nest: () {
+                builder.text(jsonEncode({
+                  'altitude': marker.altitude,
+                  'accuracy': marker.accuracy,
+                  'startDate': marker.startDate?.toIso8601String(),
+                  'endDate': marker.endDate?.toIso8601String(),
+                  'species':
+                      marker.species?.map((s) => s.toJson()).toList() ?? [],
+                }));
               });
             });
             builder.element('Point', nest: () {
@@ -212,20 +269,54 @@ class KMLUtils {
     return transect;
   }
 
+  /// Google Earth renders a CDATA description as HTML, so the images show up
+  /// in the balloon. `files/` is the KMZ convention for bundled resources.
+  static String _htmlDescription(Placemark marker, Set<String> bundled) {
+    final sb = StringBuffer();
+    for (final record in marker.species ?? <Species>[]) {
+      sb.write('<p><b>${_escape(record.species)}</b><br/>');
+      sb.write(_escape(record.speciesString));
+      sb.write('</p>');
+      for (final photo in record.photos.where(bundled.contains)) {
+        sb.write(
+            '<img src="$kKmzFilesDir/${_escape(photo)}" width="400"/><br/>');
+      }
+    }
+    return sb.toString();
+  }
+
+  static String _escape(String value) => value
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;');
+
   /// Records written by this app travel in ExtendedData. A KML from anywhere
   /// else simply has none — then only the geometry is imported.
   Map<String, dynamic>? _readRecords(XmlElement placemark) {
+    for (final el
+        in placemark.findAllElements(kRecordsDataName, namespaceUri: kHerpNamespace)) {
+      final parsed = _decode(el.innerText);
+      if (parsed != null) return parsed;
+    }
+
+    /// exports from before the namespaced payload
     for (final data in placemark.findAllElements('Data')) {
       if (data.getAttribute('name') != kRecordsDataName) continue;
       final value = data.findElements('value');
       if (value.isEmpty) continue;
-      try {
-        return Map<String, dynamic>.from(
-            jsonDecode(value.first.innerText) as Map);
-      } catch (e) {
-        log('Could not read KML records payload: ${e.toString()}');
-      }
+      final parsed = _decode(value.first.innerText);
+      if (parsed != null) return parsed;
     }
     return null;
+  }
+
+  Map<String, dynamic>? _decode(String payload) {
+    try {
+      return Map<String, dynamic>.from(jsonDecode(payload) as Map);
+    } catch (e) {
+      log('Could not read KML records payload: ${e.toString()}');
+      return null;
+    }
   }
 }
