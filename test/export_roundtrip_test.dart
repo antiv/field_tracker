@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:xml/xml.dart';
 import 'package:herp_tracker/configuration/field_options.dart';
 import 'package:herp_tracker/model/placemark.dart';
 import 'package:herp_tracker/model/point.dart';
@@ -24,7 +25,8 @@ Transect buildTransect() {
     ..method = CollectionMethod.handCapture
     ..habitat = HabitatType.settlement
     ..waterBed = WaterBedType.muddy
-    ..note = 'Uz put, "kod mosta"; kiša';
+    ..note = 'Uz put, "kod mosta"; kiša'
+    ..photos = ['HT_20260504_211530_0a1b.jpg', 'weird, name.jpg'];
 
   final second = Species()
     ..species = 'Natrix natrix'
@@ -62,6 +64,92 @@ void main() {
     await EasyLocalization.ensureInitialized();
   });
 
+  test('a KML from before the namespaced payload still imports', () {
+    /// exports already shared with colleagues carry the records in a plain
+    /// <Data name="records">, which viewers used to print at the user
+    const legacy = '''
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+<Document>
+<name>Stari transekt</name>
+<Placemark id="marker0">
+<name>Point 1</name>
+<description>Salamandra salamandra</description>
+<ExtendedData>
+<Data name="records">
+<value>{"altitude":38.9,"accuracy":16.2,"startDate":"2026-08-30T15:31:28.000","endDate":"2026-08-30T15:32:40.000","species":[{"species":"Salamandra salamandra","observedAt":"2026-08-30T15:31:28.000","count":1,"stage":"adult","photos":["HT_20260830_153126_6db2.jpg"]}]}</value>
+</Data>
+</ExtendedData>
+<Point><coordinates>20.60757,38.6235</coordinates></Point>
+</Placemark>
+</Document>
+</kml>''';
+
+    final imported = KMLUtils().kmlToTransect(legacy, DateTime(2026, 8, 30));
+    final marker = imported.markers!.single;
+    expect(marker.altitude, 38.9);
+    expect(marker.accuracy, 16.2);
+
+    final record = marker.species!.single;
+    expect(record.species, 'Salamandra salamandra');
+    expect(record.count, 1);
+    expect(record.stage, DevelopmentStage.adult);
+    expect(record.photos, ['HT_20260830_153126_6db2.jpg']);
+  });
+
+  testWidgets('the KML balloon shows every field as its own row',
+      (tester) async {
+    await tester.pumpWidget(EasyLocalization(
+      supportedLocales: const [Locale('en'), Locale('sr', 'Latn')],
+      path: 'assets/translations',
+      fallbackLocale: const Locale('en'),
+      child: Builder(
+        builder: (context) => MaterialApp(
+          localizationsDelegates: context.localizationDelegates,
+          supportedLocales: context.supportedLocales,
+          locale: context.locale,
+          home: const SizedBox(),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    final kml = buildTransect().toKML();
+    final placemark = XmlDocument.parse(kml)
+        .findAllElements('Placemark')
+        .firstWhere((p) => p.getAttribute('id') == 'marker0');
+    final rows = {
+      for (final data in placemark.findAllElements('Data'))
+        data.getAttribute('name')!: data.findElements('value').first.innerText
+    };
+
+    /// the point holds two records, so every row is numbered — otherwise the
+    /// table would repeat "Species" with nothing to tell the rows apart
+    expect(rows['1. Species'], 'Bufo bufo');
+    expect(rows['2. Species'], 'Natrix natrix');
+
+    /// labels are the CSV headers in the app language, not raw keys
+    expect(rows.keys, isNot(contains(anyElement(contains('csv_header')))));
+    expect(rows['1. Development stage'], 'Adult');
+    expect(rows['1. Exact number of individuals'], '3');
+    expect(rows['1. Photos'], 'HT_20260504_211530_0a1b.jpg; weird, name.jpg');
+
+    /// a field the surveyor left blank still gets a row — the viewer shows it
+    /// as "No value", which is information too
+    expect(rows.containsKey('2. Note'), isTrue);
+    expect(rows['2. Note'], '');
+
+    /// every record column, for both records, plus the photo row
+    expect(rows.length, (kRecordColumnKeys.length + 1) * 2);
+
+    /// the machine payload stays, namespaced so viewers skip it
+    expect(
+        placemark
+            .findAllElements(kRecordsDataName, namespaceUri: kHerpNamespace)
+            .length,
+        1);
+  });
+
   testWidgets('CSV and KML carry every record field', (tester) async {
     await tester.pumpWidget(EasyLocalization(
       supportedLocales: const [Locale('en'), Locale('sr', 'Latn')],
@@ -82,6 +170,7 @@ void main() {
     /// under the same key makes .tr() hand back a Map and the widget throws
     expect('csv'.tr(), 'CSV');
     expect('kml'.tr(), 'KML');
+    expect('kmz'.tr(), 'KMZ');
 
     final transect = buildTransect();
 
@@ -94,17 +183,18 @@ void main() {
       'Species,Date,Observation date,LAT,LONG,Altitude,GPS accuracy,Locality,'
       'Development stage,Sex,Data type,Collection method,Habitat type,'
       'Water habitat bed type,Exact number of individuals,Abundance range,Note,'
-      'Transect,Point',
+      'Transect,Point,Photos',
     );
     expect(
       lines[1],
       'Bufo bufo,04.05.2026,04.05.2026 21:15:30,44.812345,20.361234,117.4,4.8,'
       'Deliblatska peščara,Adult,F,Observation,Hand capture,'
       'Settlement and buildings,Muddy,3,2-5,'
-      '"Uz put, ""kod mosta""; kiša",Test transekt,1',
+      '"Uz put, ""kod mosta""; kiša",Test transekt,1,'
+      '"HT_20260504_211530_0a1b.jpg; weird, name.jpg"',
     );
     // a record with only the required fields must still line up
-    expect(lines[2].split(',').length, 19);
+    expect(lines[2].split(',').length, 20);
 
     // ── KML round trip ───────────────────────────────────────────────────
     final restored =
@@ -129,6 +219,8 @@ void main() {
     expect(back.habitat, HabitatType.settlement);
     expect(back.waterBed, WaterBedType.muddy);
     expect(back.note, 'Uz put, "kod mosta"; kiša');
+    expect(back.photos, ['HT_20260504_211530_0a1b.jpg', 'weird, name.jpg']);
+    expect(marker.species!.last.photos, isEmpty);
     expect(marker.species!.last.species, 'Natrix natrix');
   });
 }

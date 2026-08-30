@@ -1,12 +1,13 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:easy_localization/easy_localization.dart';
-import 'package:herp_tracker/configuration/field_options.dart';
 import 'package:herp_tracker/model/placemark.dart';
 import 'package:herp_tracker/model/point.dart';
 import 'package:herp_tracker/utils/kml_utils.dart';
+import 'package:herp_tracker/utils/kmz_utils.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../service/data_service.dart';
@@ -123,49 +124,19 @@ class Transect {
   String toCSV() {
     final sb = StringBuffer();
     sb.writeln([
-      'csv_header.species',
-      'csv_header.date',
-      'csv_header.observed_at',
-      'csv_header.lat',
-      'csv_header.lon',
-      'csv_header.altitude',
-      'csv_header.accuracy',
-      'csv_header.locality',
-      'csv_header.stage',
-      'csv_header.sex',
-      'csv_header.data_type',
-      'csv_header.method',
-      'csv_header.habitat',
-      'csv_header.water_bed',
-      'csv_header.count',
-      'csv_header.abundance',
-      'csv_header.note',
+      ...kRecordColumnKeys,
       'csv_header.transect',
       'csv_header.point',
+      'csv_header.photos',
     ].map((key) => _csvCell(key.tr())).join(','));
 
     markers?.forEach((placeMark) {
       placeMark.species?.forEach((species) {
         sb.writeln([
-          species.species,
-          DateFormat('dd.MM.yyyy').format(species.observedAt),
-          DateFormat('dd.MM.yyyy HH:mm:ss').format(species.observedAt),
-          placeMark.latitude?.toString() ?? '',
-          placeMark.longitude?.toString() ?? '',
-          placeMark.altitude?.toStringAsFixed(1) ?? '',
-          placeMark.accuracy?.toStringAsFixed(1) ?? '',
-          species.locality ?? '',
-          optionLabel(species.stage),
-          optionLabel(species.sex),
-          optionLabel(species.dataType),
-          optionLabel(species.method),
-          optionLabel(species.habitat),
-          optionLabel(species.waterBed),
-          species.count?.toString() ?? '',
-          optionLabel(species.abundance),
-          species.note ?? '',
+          ...placeMark.exportValues(species),
           name ?? '',
           '${(placeMark.id ?? 0) + 1}',
+          species.photos.join('; '),
         ].map(_csvCell).join(','));
       });
     });
@@ -186,32 +157,62 @@ class Transect {
     return KMLUtils.generateKML(this);
   }
 
+  /// Photo file names of every record in the transect.
+  List<String> get photoNames =>
+      [for (final marker in markers ?? <Placemark>[]) ...marker.photoNames];
+
+  /// True when any record names a photo. Deliberately reads nothing off the
+  /// disk — the history list calls this from its item builder on every frame.
+  /// The export checks what is actually there, once, in [shareKML].
+  bool get hasPhotos =>
+      markers?.any((marker) =>
+          marker.species?.any((record) => record.photos.isNotEmpty) ?? false) ??
+      false;
+
   /// share transect as CSV file
+  /// Both the file name and the share subject are built from this. Some share
+  /// targets name the saved file after the subject, so it must not carry a
+  /// path separator either — that is how an export came back as a KMZ with no
+  /// extension and two stray directories in its name.
+  String get _exportLabel =>
+      sanitizeFileName('${name ?? ''} ${DateFormat('dd.MM.yyyy').format(startDate)}');
+
+  String get _exportFileBase =>
+      sanitizeFileName('${name ?? ''}-${DateFormat('dd-MM-yyyy').format(startDate)}');
+
   Future<void> shareCSV([Rect? sharePositionOrigin]) async {
     /// UTF-8 with BOM — labels carry č/ć/š/ž/đ and Excel needs the BOM to
     /// pick the right encoding
     Uint8List bytes =
         Uint8List.fromList([0xEF, 0xBB, 0xBF, ...utf8.encode(toCSV())]);
-    String path = await storeFileTemporarily(
-        bytes, '$name-${DateFormat('dd-MM-yyyy').format(startDate)}.csv');
+    String path = await storeFileTemporarily(bytes, '$_exportFileBase.csv');
     await SharePlus.instance.share(ShareParams(
       files: [XFile(path)],
-      text: '$name ${DateFormat('dd/MM/yyyy').format(startDate)}',
-      subject: '$name ${DateFormat('dd/MM/yyyy').format(startDate)}',
+      text: _exportLabel,
+      subject: _exportLabel,
       sharePositionOrigin: sharePositionOrigin,
     ));
   }
 
-  /// share transect as KML file
+  /// Share the transect as KML, or as KMZ when there are photos to embed —
+  /// a plain KML could only name them. This is the one place that asks the
+  /// disk which of the named photos still exist.
   Future<void> shareKML([Rect? sharePositionOrigin]) async {
-    Uint8List bytes = Uint8List.fromList(utf8.encode(toKML()));
-    String path = await storeFileTemporarily(
-        bytes, '$name-${DateFormat('dd-MM-yyyy').format(startDate)}.kml');
+    final photos = hasPhotos ? KMZUtils.availablePhotos(this) : <String>[];
+    final label = photos.isEmpty ? 'KML' : 'KMZ';
+    final String path =
+        await temporaryFilePath('$_exportFileBase.${label.toLowerCase()}');
+
+    if (photos.isEmpty) {
+      await File(path).writeAsBytes(utf8.encode(toKML()), flush: true);
+    } else {
+      await KMZUtils.writeKMZ(this, path, photos);
+    }
 
     await SharePlus.instance.share(ShareParams(
       files: [XFile(path)],
-      text: '$name ${DateFormat('dd/MM/yyyy').format(startDate)} as KML',
-      subject: '$name ${DateFormat('dd/MM/yyyy').format(startDate)} as KML',
+      text: '$_exportLabel $label',
+      subject: '$_exportLabel $label',
       sharePositionOrigin: sharePositionOrigin,
     ));
   }

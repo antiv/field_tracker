@@ -5,7 +5,11 @@ import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sembast/sembast_io.dart';
 
+import '../model/placemark.dart';
+import '../model/species.dart';
 import '../model/transect.dart';
+import '../utils/backup_utils.dart';
+import 'media_service.dart';
 
 /// Singleton sembast database service — mirrors IsarService API.
 /// This is the permanent replacement for IsarService (no native .so deps).
@@ -85,23 +89,32 @@ class SembastService with ChangeNotifier {
 
   // ── Backup / Restore ────────────────────────────────────────────────────
 
-  /// Export all transects as a JSON file and return its path.
+  /// Export everything as a zip: the records JSON in the same shape as the
+  /// old plain-JSON backup, plus the record photos, which are otherwise only
+  /// referenced by name and would be lost restoring onto another device.
   Future<String> createBackupPath() async {
     final transects = await getAllTransects();
     final jsonList = transects.map((t) => t.toJson()).toList();
     final jsonString = const JsonEncoder.withIndent('  ').convert(jsonList);
 
     final tempDir = await getTemporaryDirectory();
-    final backupFile = File('${tempDir.path}/herp_tracker_backup.json');
-    await backupFile.writeAsString(jsonString);
-    return backupFile.path;
+    final backupPath = '${tempDir.path}/$kBackupBaseName.zip';
+    await BackupUtils.write(backupPath, jsonString, _photoNames(transects));
+    return backupPath;
   }
 
-  /// Import transects from a JSON backup file.
-  /// Clears existing data before import.
-  Future<void> restoreFromJson(String jsonFilePath) async {
-    final file = File(jsonFilePath);
-    final jsonString = await file.readAsString();
+  /// Restore from a `.zip` backup (records + photos) or from a legacy plain
+  /// `.json` one. Clears existing data before importing either way.
+  Future<void> restoreFromBackup(String backupPath) async {
+    final file = File(backupPath);
+    final String jsonString;
+
+    if (backupPath.toLowerCase().endsWith('.zip')) {
+      jsonString = await BackupUtils.read(backupPath);
+    } else {
+      jsonString = await file.readAsString();
+    }
+
     final List<dynamic> jsonList = jsonDecode(jsonString) as List<dynamic>;
 
     await _db.transaction((txn) async {
@@ -116,7 +129,24 @@ class SembastService with ChangeNotifier {
         }
       }
     });
+
+    /// the restored set replaced everything, so photos left over from the
+    /// previous database would just accumulate
+    await MediaService().deleteOrphans(
+        _photoNames(jsonList.map((e) =>
+            Transect.fromJson(Map<String, dynamic>.from(e as Map)))).toSet());
+
     notifyListeners();
+  }
+
+  Iterable<String> _photoNames(Iterable<Transect> transects) sync* {
+    for (final transect in transects) {
+      for (final marker in transect.markers ?? const <Placemark>[]) {
+        for (final record in marker.species ?? const <Species>[]) {
+          yield* record.photos;
+        }
+      }
+    }
   }
 
   /// Import transects from an Isar-read list (used during migration).

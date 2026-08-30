@@ -1,8 +1,33 @@
 import 'package:herp_tracker/model/species.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:intl/intl.dart';
+import 'package:easy_localization/easy_localization.dart';
 
+import '../configuration/field_options.dart';
 import '../utils/location_helper.dart';
+
+/// The export columns of one record, in the order of "Vrste za aplikaciju.xlsx".
+/// CSV and the KML balloon are built from this same list, so a new record field
+/// reaches both without a second edit. Transect name, point number and the
+/// photo list sit outside it — each export places those where it wants them.
+const List<String> kRecordColumnKeys = [
+  'csv_header.species',
+  'csv_header.date',
+  'csv_header.observed_at',
+  'csv_header.lat',
+  'csv_header.lon',
+  'csv_header.altitude',
+  'csv_header.accuracy',
+  'csv_header.locality',
+  'csv_header.stage',
+  'csv_header.sex',
+  'csv_header.data_type',
+  'csv_header.method',
+  'csv_header.habitat',
+  'csv_header.water_bed',
+  'csv_header.count',
+  'csv_header.abundance',
+  'csv_header.note',
+];
 
 class Placemark {
   int? id;
@@ -28,6 +53,10 @@ class Placemark {
     this.description,
     this.species,
   });
+
+  /// Photo file names of every record on this point.
+  List<String> get photoNames =>
+      [for (final record in species ?? <Species>[]) ...record.photos];
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -106,6 +135,29 @@ class Placemark {
     }
     return '';
   }
+
+  /// Values for [kRecordColumnKeys], same order, same length. Empty rather
+  /// than absent for a field the surveyor left blank — the balloon shows the
+  /// row as "No value", which is information too.
+  List<String> exportValues(Species record) => [
+        record.species,
+        DateFormat('dd.MM.yyyy').format(record.observedAt),
+        DateFormat('dd.MM.yyyy HH:mm:ss').format(record.observedAt),
+        latitude?.toString() ?? '',
+        longitude?.toString() ?? '',
+        altitude?.toStringAsFixed(1) ?? '',
+        accuracy?.toStringAsFixed(1) ?? '',
+        record.locality ?? '',
+        optionLabel(record.stage),
+        optionLabel(record.sex),
+        optionLabel(record.dataType),
+        optionLabel(record.method),
+        optionLabel(record.habitat),
+        optionLabel(record.waterBed),
+        record.count?.toString() ?? '',
+        optionLabel(record.abundance),
+        record.note ?? '',
+      ];
 
   String get speciesString {
     /// return all species in format: species1, species2, species3

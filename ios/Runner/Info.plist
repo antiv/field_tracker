@@ -59,6 +59,12 @@
 	<string>The app uses your location in the background to track your route during a herpetofauna transect survey, even when the screen is locked or the app is not active.</string>
 	<key>NSLocationAlwaysUsageDescription</key>
 	<string>The app uses your location in the background to track your route during a herpetofauna transect survey, even when the screen is locked or the app is not active.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>The app uses the camera so you can photograph a reptile or amphibian you have found and attach the photo to the observation record.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>The app saves the photos you take into a Herp Tracker album in your photo library, so your field photos stay available outside the app.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>The app needs access to your photo library so you can attach existing photos to an observation record and so it can keep them in the Herp Tracker album.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>

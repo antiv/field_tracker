@@ -1,8 +1,11 @@
+import 'dart:developer';
 import 'dart:io';
 
 import 'package:herp_tracker/service/data_service.dart';
+import 'package:herp_tracker/service/media_service.dart';
 import 'package:herp_tracker/service/sembast_service.dart';
 import 'package:herp_tracker/utils/kml_utils.dart';
+import 'package:herp_tracker/utils/kmz_utils.dart';
 import 'package:context_holder/context_holder.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -91,6 +94,57 @@ void showYesNoDialog(
   );
 }
 
+/// Confirm a delete that would leave photo files behind, with an opt-in to
+/// delete them too. The checkbox starts **off**: a record vanishing from the
+/// database must never take the pictures with it unless the user says so.
+/// With no photos in play this is the plain yes/no dialog.
+void showDeleteWithPhotosDialog(
+    List<String> photos, void Function(bool deletePhotos) onConfirm) {
+  if (photos.isEmpty) {
+    showYesNoDialog(() => onConfirm(false), () {});
+    return;
+  }
+
+  bool deletePhotos = false;
+  showDialogBox(StatefulBuilder(
+    builder: (context, setState) => AlertDialog(
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('are_you_sure'.tr(), style: const TextStyle(fontSize: 16)),
+          const SizedBox(height: 8),
+          CheckboxListTile(
+            value: deletePhotos,
+            onChanged: (value) =>
+                setState(() => deletePhotos = value ?? false),
+            title: Text('delete_photos_too'.tr(args: ['${photos.length}'])),
+            subtitle: Text('delete_photos_hint'.tr(),
+                style: const TextStyle(fontSize: 12)),
+            contentPadding: EdgeInsets.zero,
+            controlAffinity: ListTileControlAffinity.leading,
+            visualDensity: VisualDensity.compact,
+          ),
+        ],
+      ),
+      actions: [
+        OutlinedButton(
+          onPressed: () => Navigator.of(ContextHolder.currentContext).pop(),
+          child: Text('no'.tr()),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            Navigator.of(ContextHolder.currentContext).pop();
+            if (deletePhotos) MediaService().delete(photos);
+            onConfirm(deletePhotos);
+          },
+          child: Text('yes'.tr()),
+        ),
+      ],
+    ),
+  ));
+}
+
 void showTextInputDialog(String title, String hint, String? defaultValue,
     Function(String) onConfirm) {
   String value = defaultValue ?? '';
@@ -164,11 +218,14 @@ void showFullScreenDialog(Widget widget, {String? title}) {
   );
 }
 
-Future<void> showImportKMLDialog() async {
-  final PlatformFile? picked = await FilePicker.pickFile(
-    type: FileType.custom,
-    allowedExtensions: ['kml'],
-  );
+/// Imports either format the app exports. A KMZ brings its photos with it;
+/// a plain KML brings only the names they had.
+Future<void> showImportDialog() async {
+  /// deliberately not FileType.custom: that maps the extensions through
+  /// Android's MimeTypeMap, which knows neither kml nor kmz, and the files
+  /// end up greyed out in the picker. Filter here instead, the way
+  /// [restoreData] does.
+  final PlatformFile? picked = await FilePicker.pickFile(type: FileType.any);
   if (picked == null) return;
 
   /// on mobile the picker always hands back a local copy; a null path would
@@ -180,12 +237,40 @@ Future<void> showImportKMLDialog() async {
   }
 
   final File file = File(path);
-  final String fileData = await file.readAsString();
-  final Transect transect =
-      KMLUtils().kmlToTransect(fileData, file.lastModifiedSync());
-  SembastService().addTransect(transect);
-  DataService().setTransect(transect);
-  showSnackBar('import_success'.tr());
+  final DateTime fileDate = file.lastModifiedSync();
+  try {
+    /// The format is decided by what the file *is*, not what it is called.
+    /// Mail clients, chat apps and cloud drives rename attachments freely —
+    /// one came back as "Transect 30.08.2026 as KMZ" with no extension at
+    /// all, and reading a zip as UTF-8 fails with a decode error rather than
+    /// anything a user could act on.
+    final Transect transect = await _isZip(file)
+        ? await KMZUtils.readKMZ(path, fileDate)
+        : KMLUtils().kmlToTransect(await file.readAsString(), fileDate);
+    await SembastService().addTransect(transect);
+    DataService().setTransect(transect);
+    showSnackBar('import_success'.tr());
+  } catch (e) {
+    log('Could not import ${picked.name}: ${e.toString()}');
+    showSnackBar('invalid_file_format'.tr());
+  }
+}
+
+/// Every zip — and so every KMZ — starts with the local file header magic.
+Future<bool> _isZip(File file) async {
+  final RandomAccessFile handle = await file.open();
+  try {
+    final head = await handle.read(4);
+    return head.length == 4 &&
+        head[0] == 0x50 &&
+        head[1] == 0x4B &&
+        head[2] == 0x03 &&
+        head[3] == 0x04;
+  } catch (e) {
+    return false;
+  } finally {
+    await handle.close();
+  }
 }
 
 Future<bool> showPermissionInfoDialog() async {
@@ -242,7 +327,8 @@ Future<void> restoreData() async {
   if (picked == null) return;
 
   final String? path = picked.path;
-  if (path == null || picked.extension?.toLowerCase() != 'json') {
+  const accepted = {'json', 'zip'};
+  if (path == null || !accepted.contains(picked.extension?.toLowerCase())) {
     showSnackBar('invalid_file_format'.tr());
     return;
   }
@@ -250,8 +336,8 @@ Future<void> restoreData() async {
   try {
     showSnackBar('restoring_backup'.tr(), duration: 2);
 
-    // JSON restore via SembastService
-    await SembastService().restoreFromJson(path);
+    /// .zip carries the photos too; plain .json is the older backup format
+    await SembastService().restoreFromBackup(path);
     showSnackBar('restore_success'.tr());
     DataService().setTransect(null);
   } catch (e) {

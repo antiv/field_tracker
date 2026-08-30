@@ -2,8 +2,10 @@ import 'package:herp_tracker/configuration/field_options.dart';
 import 'package:herp_tracker/configuration/species.dart';
 import 'package:herp_tracker/model/species.dart';
 import 'package:herp_tracker/service/data_service.dart';
+import 'package:herp_tracker/service/media_service.dart';
 import 'package:herp_tracker/widgets/enum_radio.dart';
 import 'package:herp_tracker/widgets/option_picker.dart';
+import 'package:herp_tracker/widgets/photo_strip.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 
@@ -42,6 +44,13 @@ class _SpeciesFormState extends State<SpeciesForm> {
   bool _isEdit = false;
   bool _advancedOpen = false;
 
+  /// Photos hit the disk the moment they are taken, before the record exists.
+  /// [_committed] is what the record being edited already owns: anything in
+  /// [_photos] beyond it was added and is dropped if the form is cancelled,
+  /// and anything in it that a save no longer lists is deleted on that save.
+  List<String> _photos = [];
+  Set<String> _committed = {};
+
   @override
   void initState() {
     final species = widget.species;
@@ -58,6 +67,8 @@ class _SpeciesFormState extends State<SpeciesForm> {
       _method = species.method;
       _habitat = species.habitat;
       _waterBed = species.waterBed;
+      _photos = List.of(species.photos);
+      _committed.addAll(_photos);
       _advancedOpen = species.dataType != null ||
           species.method != null ||
           species.habitat != null ||
@@ -74,6 +85,12 @@ class _SpeciesFormState extends State<SpeciesForm> {
 
   @override
   void dispose() {
+    /// covers both Cancel and the close button in showFullScreenDialog's
+    /// AppBar — the gallery copy stays, the way a camera app behaves
+    final orphans = _photos.where((n) => !_committed.contains(n)).toList();
+    if (orphans.isNotEmpty) {
+      MediaService().delete(orphans);
+    }
     _speciesController.dispose();
     _countController.dispose();
     _localityController.dispose();
@@ -99,7 +116,12 @@ class _SpeciesFormState extends State<SpeciesForm> {
         ..waterBed = _waterBed
         ..note = _noteController.text.trim().isEmpty
             ? null
-            : _noteController.text.trim();
+            : _noteController.text.trim()
+        ..photos = List.of(_photos);
+
+      /// the save makes the removals permanent, so their files can go
+      MediaService().delete(_committed.difference(_photos.toSet()));
+      _committed = _photos.toSet();
 
       DataService().setLastLocalityPreference(locality);
 
@@ -128,6 +150,11 @@ class _SpeciesFormState extends State<SpeciesForm> {
       _stage = null;
       _sex = null;
       _abundance = null;
+
+      /// the record just saved owns its photos now; the next one starts with
+      /// none, and must not be able to delete the previous one's files
+      _committed = {};
+      _photos = [];
     });
   }
 
@@ -242,6 +269,11 @@ class _SpeciesFormState extends State<SpeciesForm> {
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 12),
+                PhotoStrip(
+                  names: _photos,
+                  onChanged: (names) => setState(() => _photos = names),
                 ),
                 const SizedBox(height: 8),
                 Theme(
