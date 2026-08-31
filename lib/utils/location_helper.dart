@@ -3,6 +3,7 @@ import 'dart:developer';
 import 'dart:math' as math;
 
 import 'package:herp_tracker/service/data_service.dart';
+import 'package:herp_tracker/utils/background_location_permission.dart';
 import 'package:herp_tracker/utils/ux_builder.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
@@ -72,21 +73,48 @@ Future<void> goToLocation(
   controller.animateCamera(CameraUpdate.newCameraPosition(cameraPosition));
 }
 
+/// Asked at most once per app run: the user who says no should not get the
+/// dialog again on every tap of the my-location button.
+bool _backgroundPermissionAsked = false;
+
 Future<bool> enableBackgroundMode(
   Location location,
 ) async {
   bool bgModeEnabled = await location.isBackgroundModeEnabled();
   if (bgModeEnabled) {
     return true;
-  } else {
-    try {
-      bgModeEnabled = await location.enableBackgroundMode(enable: true);
-    } catch (e) {
-      log('Error enabling background mode: ${e.toString()}');
-      bgModeEnabled = false;
-    }
-    return bgModeEnabled;
   }
+
+  /// The plugin asks for foreground + background location in one request,
+  /// which Android 11+ ignores outright — no prompt, no grant. So the
+  /// "Allow all the time" step is requested here on its own first; once it is
+  /// granted the plugin only has to start its foreground service.
+  if (!await ensureBackgroundPermission()) {
+    return false;
+  }
+
+  try {
+    bgModeEnabled = await location.enableBackgroundMode(enable: true);
+  } catch (e) {
+    log('Error enabling background mode: ${e.toString()}');
+    bgModeEnabled = false;
+  }
+  return bgModeEnabled;
+}
+
+/// No-op on iOS, where the plugin's own always-authorization flow is correct.
+Future<bool> ensureBackgroundPermission() async {
+  if (await BackgroundLocationPermission.isGranted()) return true;
+  if (_backgroundPermissionAsked) return false;
+  _backgroundPermissionAsked = true;
+
+  if (!await showBackgroundPermissionInfoDialog()) return false;
+  if (await BackgroundLocationPermission.request()) return true;
+
+  if (await showBackgroundPermissionDeniedDialog()) {
+    await BackgroundLocationPermission.openSettings();
+  }
+  return false;
 }
 
 Marker getNewMarker(String id, LocationData locationData, Function onTap) {

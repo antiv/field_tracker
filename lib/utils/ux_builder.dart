@@ -273,16 +273,38 @@ Future<bool> _isZip(File file) async {
   }
 }
 
-Future<bool> showPermissionInfoDialog() async {
+Future<bool> showPermissionInfoDialog() => _showRationaleDialog(
+      'location_permission_title'.tr(),
+      Platform.isIOS
+          ? 'location_permission_content_ios'.tr()
+          : 'location_permission_content'.tr(),
+    );
+
+/// Second step of the Android permission flow: "Allow all the time" has to be
+/// requested on its own, after the foreground grant, or Android 11+ shows
+/// nothing at all. Google also expects a rationale immediately before it.
+Future<bool> showBackgroundPermissionInfoDialog() => _showRationaleDialog(
+      'location_background_title'.tr(),
+      'location_background_content'.tr(),
+    );
+
+/// Shown when the background request came back denied: on Android 11+ the only
+/// place left to grant it is the app's own settings page.
+Future<bool> showBackgroundPermissionDeniedDialog() => _showRationaleDialog(
+      'location_background_title'.tr(),
+      'location_background_denied'.tr(),
+      confirmText: 'open_settings'.tr(),
+    );
+
+Future<bool> _showRationaleDialog(String title, String content,
+    {String? confirmText}) async {
   bool result = false;
   await showDialog(
     context: ContextHolder.currentContext,
     builder: (BuildContext context) {
       return AlertDialog(
-        title: Text('location_permission_title'.tr()),
-        content: Text(Platform.isIOS
-            ? 'location_permission_content_ios'.tr()
-            : 'location_permission_content'.tr()),
+        title: Text(title),
+        content: Text(content),
         actions: [
           TextButton(
             onPressed: () {
@@ -296,7 +318,7 @@ Future<bool> showPermissionInfoDialog() async {
               Navigator.of(context).pop();
               result = true;
             },
-            child: Text('continue'.tr()),
+            child: Text(confirmText ?? 'continue'.tr()),
           ),
         ],
       );
