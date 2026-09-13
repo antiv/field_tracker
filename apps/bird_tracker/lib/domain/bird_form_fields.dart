@@ -88,123 +88,22 @@ class _BirdFormFieldsState extends RecordFieldsState<BirdFormFields> {
           children: [
             Expanded(
               flex: 3,
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: Text('select_atlas_code'.tr()),
-                      contentPadding:
-                          const EdgeInsets.fromLTRB(8, 20, 8, 8),
-                      content: SizedBox(
-                        width: double.maxFinite,
-                        child: ListView.builder(
-                          shrinkWrap: true,
-                          itemCount: kCodes.keys.length,
-                          itemBuilder: (context, index) {
-                            final code = kCodes.keys.elementAt(index);
-                            return Card(
-                              margin: const EdgeInsets.symmetric(
-                                  vertical: 4, horizontal: 8),
-                              child: ListTile(
-                                leading: CircleAvatar(
-                                  radius: 14,
-                                  backgroundColor:
-                                      Colors.green.shade100,
-                                  child: Text('$code',
-                                      style: TextStyle(
-                                          color: Colors.green.shade900,
-                                          fontSize: 12)),
-                                ),
-                                title: Text('codes.$code'.tr(),
-                                    style:
-                                        const TextStyle(fontSize: 14)),
-                                onTap: () {
-                                  setState(() => _code = code);
-                                  Navigator.pop(context);
-                                },
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.explore, size: 18),
-                label: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    _code != null
-                        ? 'select_code'.tr(args: [_code.toString()])
-                        : 'select_atlas_code'.tr(),
-                  ),
-                ),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                      vertical: 12, horizontal: 8),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
+              child: CodePicker(
+                codes: kCodes.keys.toList(),
+                value: _code,
+                onChanged: (code) => setState(() => _code = code),
+                descriptionKey: (code) => 'codes.$code',
               ),
             ),
-            if (_code != null)
-              IconButton(
-                onPressed: () => setState(() => _code = null),
-                icon: const Icon(Icons.clear,
-                    color: Colors.grey, size: 18),
-                visualDensity: VisualDensity.compact,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(
-                    minWidth: 32, minHeight: 32),
-              ),
             const SizedBox(width: 8),
             Expanded(
               flex: 2,
-              child: TextFormField(
+              child: CountField(
                 controller: _countController,
-                textAlign: TextAlign.center,
-                decoration: InputDecoration(
-                  labelText: 'count'.tr(),
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 4, vertical: 16),
-                  suffixIconConstraints: const BoxConstraints(
-                      minWidth: 32, minHeight: 32),
-                  suffixIcon: IconButton(
-                    icon: const Icon(Icons.add, size: 18),
-                    visualDensity: VisualDensity.compact,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(
-                        minWidth: 32, minHeight: 32),
-                    onPressed: () {
-                      final current =
-                          int.tryParse(_countController.text) ?? 0;
-                      _countController.text = (current + 1).toString();
-                    },
-                  ),
-                  prefixIconConstraints: const BoxConstraints(
-                      minWidth: 32, minHeight: 32),
-                  prefixIcon: IconButton(
-                    icon: const Icon(Icons.remove, size: 18),
-                    visualDensity: VisualDensity.compact,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(
-                        minWidth: 32, minHeight: 32),
-                    onPressed: () {
-                      final current =
-                          int.tryParse(_countController.text) ?? 0;
-                      if (current > 0) {
-                        _countController.text =
-                            (current - 1).toString();
-                      }
-                    },
-                  ),
-                ),
+                label: 'count'.tr(),
                 validator: (value) => (value == null || value.isEmpty)
                     ? 'enter_valid_data'.tr()
                     : null,
-                keyboardType: TextInputType.number,
               ),
             ),
           ],

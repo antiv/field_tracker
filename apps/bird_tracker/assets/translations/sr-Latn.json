@@ -382,8 +382,6 @@
   },
   "behavior": "Ponašanje",
   "count": "Broj",
-  "select_atlas_code": "Izaberi atlas kod",
-  "select_code": "Izaberi kod: {}",
   "species_title": "Vrsta",
   "time_label": "Vreme:",
   "direction_label": "Smer:",

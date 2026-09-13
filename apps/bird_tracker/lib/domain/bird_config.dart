@@ -74,19 +74,3 @@ List<String> birdExportValues(Placemark point, TrackerRecord record) {
     bird.code?.toString() ?? '',
   ];
 }
-
-/// Decimal degrees as `N 44° 48' 44.44"`.
-String convertLatLng(double decimal, bool isLat) {
-  String degree = "${decimal.toString().split(".")[0]}°";
-  double minutesBeforeConversion =
-      double.parse("0.${decimal.toString().split(".")[1]}");
-  String minutes =
-      "${(minutesBeforeConversion * 60).toString().split('.')[0]}'";
-  double secondsBeforeConversion = double.parse(
-      "0.${(minutesBeforeConversion * 60).toString().split('.')[1]}");
-  String seconds =
-      '${double.parse((secondsBeforeConversion * 60).toString()).toStringAsFixed(2)}" ';
-  String dmsOutput =
-      "${isLat ? decimal > 0 ? 'N' : 'S' : decimal > 0 ? 'E' : 'W'} $degree $minutes $seconds";
-  return dmsOutput;
-}

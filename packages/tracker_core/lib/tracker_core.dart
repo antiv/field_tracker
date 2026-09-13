@@ -23,3 +23,5 @@ export 'widgets/enum_radio.dart';
 export 'widgets/option_picker.dart';
 export 'widgets/photo_strip.dart';
 export 'widgets/record_form_shell.dart';
+export 'widgets/code_picker.dart';
+export 'widgets/count_field.dart';

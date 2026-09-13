@@ -104,5 +104,7 @@
     "transect": "Transect",
     "point": "Point",
     "photos": "Photos"
-  }
+  },
+  "select_atlas_code": "Select atlas code",
+  "select_code": "Select code: {}"
 }

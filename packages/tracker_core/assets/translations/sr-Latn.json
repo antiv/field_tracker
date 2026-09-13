@@ -104,5 +104,7 @@
     "transect": "Transekt",
     "point": "Tačka",
     "photos": "Fotografije"
-  }
+  },
+  "select_atlas_code": "Izaberi atlas kod",
+  "select_code": "Izaberi kod: {}"
 }

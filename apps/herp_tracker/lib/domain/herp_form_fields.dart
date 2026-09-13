@@ -158,47 +158,9 @@ class _HerpFormFieldsState extends RecordFieldsState<HerpFormFields> {
           children: [
             Expanded(
               flex: 2,
-              child: TextFormField(
+              child: CountField(
                 controller: _countController,
-                textAlign: TextAlign.center,
-                decoration: InputDecoration(
-                  labelText: 'fields.count'.tr(),
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 4, vertical: 16),
-                  suffixIconConstraints:
-                      const BoxConstraints(minWidth: 32, minHeight: 32),
-                  suffixIcon: IconButton(
-                    icon: const Icon(Icons.add, size: 18),
-                    visualDensity: VisualDensity.compact,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(
-                        minWidth: 32, minHeight: 32),
-                    onPressed: () {
-                      final current =
-                          int.tryParse(_countController.text) ?? 0;
-                      _countController.text = (current + 1).toString();
-                    },
-                  ),
-                  prefixIconConstraints:
-                      const BoxConstraints(minWidth: 32, minHeight: 32),
-                  prefixIcon: IconButton(
-                    icon: const Icon(Icons.remove, size: 18),
-                    visualDensity: VisualDensity.compact,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(
-                        minWidth: 32, minHeight: 32),
-                    onPressed: () {
-                      final current =
-                          int.tryParse(_countController.text) ?? 0;
-                      if (current > 0) {
-                        _countController.text =
-                            (current - 1).toString();
-                      }
-                    },
-                  ),
-                ),
-                keyboardType: TextInputType.number,
+                label: 'fields.count'.tr(),
               ),
             ),
             const SizedBox(width: 8),

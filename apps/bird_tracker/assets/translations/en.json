@@ -382,8 +382,6 @@
   },
   "behavior": "Behavior",
   "count": "Count",
-  "select_atlas_code": "Select atlas code",
-  "select_code": "Select code: {}",
   "species_title": "Species",
   "time_label": "Time:",
   "direction_label": "Direction:",
