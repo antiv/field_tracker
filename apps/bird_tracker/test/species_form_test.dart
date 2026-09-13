@@ -2,14 +2,14 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:bird_tracker/configuration/species.dart';
-import 'package:bird_tracker/model/species.dart';
-import 'package:bird_tracker/service/data_service.dart';
-import 'package:bird_tracker/service/media_service.dart';
-import 'package:bird_tracker/widgets/species_form.dart';
+import 'package:bird_tracker/domain/bird_config.dart';
+import 'package:bird_tracker/domain/bird_record.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tracker_core/testing.dart';
+import 'package:tracker_core/tracker_core.dart';
 
 /// EasyLocalization loads its JSON off the real asset bundle, which only
 /// resolves inside [WidgetTester.runAsync] — without it the widget never gets
@@ -17,20 +17,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 Future<void> pumpForm(WidgetTester tester, Widget child,
     {Locale? startLocale}) async {
   await tester.runAsync(() async {
-    await tester.pumpWidget(EasyLocalization(
-      supportedLocales: const [Locale('en'), Locale('sr', 'Latn')],
-      path: 'assets/translations',
-      fallbackLocale: const Locale('en'),
-      startLocale: startLocale,
-      child: Builder(
-        builder: (context) => MaterialApp(
-          localizationsDelegates: context.localizationDelegates,
-          supportedLocales: context.supportedLocales,
-          locale: context.locale,
-          home: Scaffold(body: child),
-        ),
-      ),
-    ));
+    await tester.pumpWidget(localizedTestApp(
+        home: Scaffold(body: child), startLocale: startLocale));
     await tester.pump();
   });
   await tester.pumpAndSettle();
@@ -41,6 +29,7 @@ late Directory mediaRoot;
 void main() {
   setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
+    TrackerConfig.current = birdConfig;
     SharedPreferences.setMockInitialValues({});
     await EasyLocalization.ensureInitialized();
     await DataService().initPreferences();
@@ -70,7 +59,7 @@ void main() {
   });
 
   testWidgets('shows the record fields and the photo strip', (tester) async {
-    await pumpForm(tester, const SpeciesForm());
+    await pumpForm(tester, const RecordFormShell());
 
     expect(find.text('Species'), findsOneWidget);
     expect(find.text('Count'), findsOneWidget);
@@ -88,9 +77,11 @@ void main() {
   });
 
   testWidgets('saves a record with an automatic timestamp', (tester) async {
-    Species? saved;
+    BirdRecord? saved;
     await pumpForm(
-        tester, SpeciesForm(onSaved: (species, close) => saved = species));
+        tester,
+        RecordFormShell(
+            onSaved: (record, close) => saved = record as BirdRecord));
 
     await tester.enterText(find.byType(EditableText).first, 'Parus major');
     await tester.pumpAndSettle();
@@ -116,7 +107,7 @@ void main() {
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
 
-    await pumpForm(tester, const SpeciesForm(),
+    await pumpForm(tester, const RecordFormShell(),
         startLocale: const Locale('sr', 'Latn'));
 
     expect(find.text('Vrsta'), findsOneWidget);
@@ -133,7 +124,7 @@ void main() {
   testWidgets('editing a record leaves its photos on disk', (tester) async {
     const photo = 'BT_20260504_211530_0a1b.jpg';
 
-    final existing = Species()
+    final existing = BirdRecord()
       ..species = 'Sitta europaea'
       ..time = '10:00:00'
       ..count = 2
@@ -141,11 +132,12 @@ void main() {
       ..description = null
       ..photos = [photo];
 
-    Species? saved;
+    BirdRecord? saved;
     await pumpForm(
         tester,
-        SpeciesForm(
-            species: existing, onSaved: (species, close) => saved = species));
+        RecordFormShell(
+            existing: existing,
+            onSaved: (record, close) => saved = record as BirdRecord));
 
     /// written after the pump on purpose: an Image.file that resolves starts
     /// an image decode the test binding only completes inside runAsync, and
@@ -171,14 +163,14 @@ void main() {
 
   testWidgets('editing a record offers Save only, not "Save and new"',
       (tester) async {
-    final existing = Species()
+    final existing = BirdRecord()
       ..species = 'Sitta europaea'
       ..time = '10:00:00'
       ..count = 2
       ..code = 12
       ..description = null;
 
-    await pumpForm(tester, SpeciesForm(species: existing));
+    await pumpForm(tester, RecordFormShell(existing: existing));
 
     expect(find.text('Save'), findsOneWidget);
     expect(find.text('Save and new'), findsNothing);

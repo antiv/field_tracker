@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import 'package:bird_tracker/model/species.dart';
+import '../domain/bird_record.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 

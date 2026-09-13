@@ -1,20 +1,18 @@
 import 'dart:convert';
 
-import 'package:bird_tracker/model/placemark.dart';
-import 'package:bird_tracker/model/point.dart';
-import 'package:bird_tracker/model/species.dart';
-import 'package:bird_tracker/model/transect.dart';
-import 'package:bird_tracker/utils/kml_utils.dart';
+import 'package:bird_tracker/domain/bird_config.dart';
+import 'package:bird_tracker/domain/bird_record.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tracker_core/testing.dart';
+import 'package:tracker_core/tracker_core.dart';
 import 'package:xml/xml.dart';
 
 const String photo = 'BT_20260504_211530_0a1b.jpg';
 
 Transect buildTransect() {
-  final record = Species()
+  final record = BirdRecord()
     ..species = 'Parus major'
     ..time = '21:15:30'
     ..count = 3
@@ -24,7 +22,7 @@ Transect buildTransect() {
     ..description = 'pevanje, čučanje'
     ..photos = [photo, 'weird, name.jpg'];
 
-  final second = Species()
+  final second = BirdRecord()
     ..species = 'Sitta europaea'
     ..time = '21:40:00'
     ..count = 1
@@ -48,7 +46,7 @@ Transect buildTransect() {
         endDate: DateTime(2026, 5, 4, 21, 45),
         latitude: 44.812345,
         longitude: 20.361234,
-        species: [record, second],
+        records: [record, second],
       )
     ];
 }
@@ -56,6 +54,7 @@ Transect buildTransect() {
 void main() {
   setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
+    TrackerConfig.current = birdConfig;
     SharedPreferences.setMockInitialValues({});
     await EasyLocalization.ensureInitialized();
   });
@@ -69,7 +68,7 @@ void main() {
     /// namespaced, so a viewer skips it rather than printing the JSON at the
     /// user the way a plain <Data name="records"> would
     final payload = placemark
-        .findAllElements(kRecordsDataName, namespaceUri: kBtNamespace)
+        .findAllElements(kRecordsDataName, namespaceUri: kKmlNamespace)
         .single;
     final records = jsonDecode(payload.innerText) as Map<String, dynamic>;
 
@@ -96,9 +95,9 @@ void main() {
     expect(marker.latitude, closeTo(44.812345, 0.000001));
     expect(marker.startDate, DateTime(2026, 5, 4, 21, 15));
     expect(marker.endDate, DateTime(2026, 5, 4, 21, 45));
-    expect(marker.species!.length, 2);
+    expect(marker.records!.length, 2);
 
-    final record = marker.species!.first;
+    final record = marker.records!.first as BirdRecord;
     expect(record.species, 'Parus major');
     expect(record.count, 3);
     expect(record.code, 12);
@@ -134,7 +133,7 @@ void main() {
     final imported = KMLUtils().kmlToTransect(legacy, DateTime(2026, 8, 30));
     expect(imported.name, 'Stari transekt');
 
-    final record = imported.markers!.single.species!.single;
+    final record = imported.markers!.single.records!.single as BirdRecord;
     expect(record.species, 'Parus major');
     expect(record.count, 3);
     expect(record.code, 12);
@@ -220,33 +219,30 @@ void main() {
     final csv = buildTransect().toCSV();
     final lines = const LineSplitter().convert(csv);
     expect(lines.length, 3);
+    expect(lines.first, startsWith('Species,Date,Time (from - to),Time,'));
 
     expect(lines[1], contains('Parus major'));
     expect(lines[1], contains('44.812345'));
     expect(lines[1], contains('20.361234'));
     expect(lines[1], contains('"pevanje, čučanje"'));
-    expect(lines[1], endsWith(',G,NNE,12'));
+
+    /// the bird columns keep their order and English headers — the sheets
+    /// built on this export expect them — and the shared transect, point
+    /// and photo columns follow; a photo name with a comma is quoted
+    expect(lines[1],
+        endsWith(',G,NNE,12,Test transekt,1,"$photo; weird, name.jpg"'));
 
     /// a record with only the required fields must still line up
     expect(lines[2], contains('Sitta europaea'));
-    expect(lines[2], endsWith(',,,'));
+    expect(lines[2], endsWith(',,,,Test transekt,1,'));
   });
 
   testWidgets('the share button labels are plain keys, not blocks',
       (tester) async {
-    await tester.pumpWidget(EasyLocalization(
-      supportedLocales: const [Locale('en'), Locale('sr', 'Latn')],
-      path: 'assets/translations',
-      fallbackLocale: const Locale('en'),
-      child: Builder(
-        builder: (context) => MaterialApp(
-          localizationsDelegates: context.localizationDelegates,
-          supportedLocales: context.supportedLocales,
-          locale: context.locale,
-          home: const SizedBox(),
-        ),
-      ),
-    ));
+    await tester.runAsync(() async {
+      await tester.pumpWidget(localizedTestApp());
+      await tester.pump();
+    });
     await tester.pumpAndSettle();
 
     /// .tr() on a block key hands back a Map and the widget throws at build

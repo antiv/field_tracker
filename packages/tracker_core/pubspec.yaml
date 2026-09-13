@@ -1,0 +1,42 @@
+name: tracker_core
+description: Shared core of the field tracker apps — map, GPS transect recording, photos, storage, backup, CSV/KML/KMZ export and import.
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: '>=3.10.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  google_maps_flutter: ^2.18.0
+  location: ^10.0.2
+  flutter_svg: ^2.3.0
+  flutter_speed_dial: ^7.0.0
+  sembast: ^3.8.9+1
+  path_provider: ^2.1.6
+  context_holder: ^0.0.5
+  intl: ^0.20.2
+  provider: ^6.1.2
+  shared_preferences: ^2.5.5
+  share_plus: ^13.2.0
+  xml: ^7.0.1
+  file_picker: ^12.1.2
+  collection: any
+  flutter_dotenv: ^6.0.1
+  url_launcher: ^6.3.2
+  package_info_plus: ^10.2.0
+  easy_localization: ^3.0.8
+  image_picker: ^1.2.3
+  gal: ^2.3.3
+  archive: ^4.2.0
+  path: ^1.9.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  assets:
+    - assets/translations/
