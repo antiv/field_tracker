@@ -5,11 +5,13 @@ import 'package:herp_tracker/model/point.dart';
 import 'package:herp_tracker/model/transect.dart';
 import 'package:herp_tracker/service/data_service.dart';
 import 'package:herp_tracker/service/sembast_service.dart';
+import 'package:herp_tracker/utils/geo_utils.dart';
 import 'package:herp_tracker/utils/location_helper.dart';
 import 'package:herp_tracker/utils/ux_builder.dart';
 import 'package:herp_tracker/widgets/app_menu.dart';
 import 'package:herp_tracker/widgets/species_form.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -26,14 +28,26 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   final GlobalKey<ScaffoldState> _key = GlobalKey();
 
   Location location = Location();
   Transect? transect = DataService().transect;
 
-  bool? _serviceEnabled;
   LocationData? _locationData;
+
+  /// The camera follows the user only while the map is actually on screen.
+  /// Updates keep arriving from the foreground service with the screen off,
+  /// and animating a paused, surface-less MapView every second is what fed
+  /// the renderer NaN targets — "NaN is not a valid value: (NaN,NaN)", the
+  /// other of the two crashes Bird Tracker hit in production with this same
+  /// code. Points are still recorded regardless.
+  bool _appVisible = true;
+
+  /// Last position the camera was sent to: with distanceFilter 0 a fix comes
+  /// every second even standing still, and re-animating to the same spot is
+  /// pure churn.
+  LatLng? _lastCameraTarget;
 
   StreamSubscription<LocationData>? locationStream;
 
@@ -65,9 +79,29 @@ class _HomePageState extends State<HomePage> {
     DataService().initPreferences();
     DataService().completer = _completer;
     DataService().controller = controller;
-    _goToCurrentLocation();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkOpenTransect());
+    WidgetsBinding.instance.addObserver(this);
+
+    /// one dialog at a time: the permission flow first, the resume question
+    /// after it — shown together, "Continue" could be tapped with the
+    /// permission prompt still open, and two permission requests in flight
     super.initState();
+    _goToCurrentLocation().whenComplete(_checkOpenTransect);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final visible = state == AppLifecycleState.resumed;
+    if (visible == _appVisible) return;
+    _appVisible = visible;
+    if (!visible || !mounted) return;
+
+    /// back on screen: draw what was recorded meanwhile and catch the
+    /// camera up with the user in one move
+    setState(() {});
+    final loc = _locationData;
+    if (loc != null && locationStream != null) {
+      _followCamera(LatLng(loc.latitude, loc.longitude));
+    }
   }
 
   /// A transect is "open" while its endDate is null. Only one may exist:
@@ -91,10 +125,12 @@ class _HomePageState extends State<HomePage> {
       /// the user confirmed they are resuming this transect — start
       /// recording right away so the track continues from its last point;
       /// setTransect moved the camera to the transect start (goToFirst),
-      /// so bring it back to where the user actually is
-      await _startListener();
-      await _goToCurrentLocation();
-      showSnackBar('transect_resumed'.tr());
+      /// so bring it back to where the user actually is. Without the
+      /// permission the transect simply stays open for the next attempt.
+      if (await _startListener()) {
+        await _goToCurrentLocation();
+        showSnackBar('transect_resumed'.tr());
+      }
       if (mounted) setState(() {});
     }, () {
       _closeTransect(open);
@@ -118,96 +154,126 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
+  /// The my-location button and the startup centering. A running recording
+  /// is left alone — `getLocation` works alongside the stream, and stopping
+  /// and restarting it here used to bounce the foreground service too.
   Future<void> _goToCurrentLocation() async {
-    if (locationStream != null) {
-      await _stopListener();
-      try {
-        final loc = await goToCurrentLocation(_serviceEnabled ?? false,
-            location, _locationData, controller, _completer);
-        if (loc != null) {
-          setState(() {
-            _locationData = loc;
-          });
-        }
-        for (final mark in _markers) {
-          await controller?.hideMarkerInfoWindow(mark.markerId);
-        }
-        if (_markers.isNotEmpty) {
-          await DataService()
-              .controller
-              ?.showMarkerInfoWindow(_markers.last.markerId);
-        }
-      } catch (e) {
-        log('Error in goToCurrentLocation: ${e.toString()}');
-      } finally {
-        await _startListener();
+    final loc = await goToCurrentLocation(location, controller, _completer);
+    if (loc != null && mounted) {
+      setState(() {
+        _locationData = loc;
+      });
+    }
+    if (locationStream == null) return;
+    try {
+      for (final mark in _markers) {
+        await controller?.hideMarkerInfoWindow(mark.markerId);
       }
-    } else {
-      final loc = await goToCurrentLocation(_serviceEnabled ?? false, location,
-          _locationData, controller, _completer);
-      if (loc != null) {
-        setState(() {
-          _locationData = loc;
-        });
+      if (_markers.isNotEmpty) {
+        await controller?.showMarkerInfoWindow(_markers.last.markerId);
       }
+    } on PlatformException catch (e) {
+      log('Could not toggle the marker info window: ${e.message}');
     }
   }
 
   void onLocationChange(LocationData currentLocation) {
     log('Location updated in listener: lat=${currentLocation.latitude}, lng=${currentLocation.longitude}');
-    setState(() {
-      _locationData = currentLocation;
-      // points.add(LatLng(_locationData!.latitude!, _locationData!.longitude!));
-      _polyLines?.add(Polyline(
-          polylineId: const PolylineId('1'),
-          points: _polyLines.first.points
-            ..add(LatLng(_locationData!.latitude!, _locationData!.longitude!)),
-          color: Colors.red,
-          width: 5));
-      transect?.points = transect?.points?.toList(growable: true) ?? [];
-      transect?.points?.add(Point()
-        ..latitude = _locationData!.latitude!
-        ..longitude = _locationData!.longitude!);
+    final target = LatLng(currentLocation.latitude, currentLocation.longitude);
+    if (!isFiniteLatLng(target)) return;
 
-      /// get current camera zum
-      controller?.getZoomLevel().then((value) {
-        /// change camera position
-        CameraPosition cameraPosition = CameraPosition(
-          target: LatLng(_locationData!.latitude!, _locationData!.longitude!),
-          zoom: value,
-        );
-        controller
-            ?.animateCamera(CameraUpdate.newCameraPosition(cameraPosition));
-      });
-    });
+    /// the record is kept whether or not anyone is looking
+    _locationData = currentLocation;
+    _polyLines?.first.points.add(target);
+    transect?.points = transect?.points?.toList(growable: true) ?? [];
+    transect?.points?.add(Point()
+      ..latitude = target.latitude
+      ..longitude = target.longitude);
+
+    if (!_appVisible || !mounted) return;
+    setState(() {});
+    _followCamera(target);
   }
 
-  Future<void> _startListener() async {
-    if (locationStream == null) {
-      location.changeSettings(
-          accuracy: LocationAccuracy.high, interval: 1000, distanceFilter: 0);
-      DataService().isOpen.value = false;
-      
-      locationStream =
-          location.onLocationChanged.listen((LocationData currentLocation) {
-        onLocationChange(currentLocation);
+  /// Pans to [target] at the current zoom, skipping anything the renderer
+  /// would choke on — a non-finite zoom or target — and a target it is
+  /// already at.
+  Future<void> _followCamera(LatLng target) async {
+    final map = controller;
+    if (map == null || !isFiniteLatLng(target) || target == _lastCameraTarget) {
+      return;
+    }
+    try {
+      final zoom = await map.getZoomLevel();
+      if (!zoom.isFinite || !_appVisible || !mounted) return;
+      await map.animateCamera(CameraUpdate.newCameraPosition(
+          CameraPosition(target: target, zoom: zoom)));
+
+      /// recorded only once the move went out: a follow that bailed above
+      /// must not make the resume catch-up think the camera is already there
+      _lastCameraTarget = target;
+    } on PlatformException catch (e) {
+      /// the map is not ready, or is being torn down — nothing to follow
+      log('Could not follow the camera: ${e.message}');
+    }
+  }
+
+  /// Starts recording. `false` when it could not: no service, no permission.
+  /// The permission gate is not optional — `changeSettings` starts updates
+  /// natively, and without the grant that used to kill the process.
+  ///
+  /// The subscription is only assigned after several awaits (permission
+  /// dialogs, the foreground service), so a second call in that window
+  /// joins the one in flight instead of subscribing a second time — the
+  /// first subscription would be overwritten and never cancelled, and keep
+  /// recording after Stop.
+  Future<bool> _startListener() =>
+      _listenerStarting ??= _doStartListener().whenComplete(() {
+        _listenerStarting = null;
       });
 
-      log('Fetching initial location for startListener...');
-      location.getLocation().timeout(const Duration(seconds: 4)).then((initialLocation) {
-        log('initialLocation fetched for startListener: lat=${initialLocation.latitude}, lng=${initialLocation.longitude}');
-        if (mounted) {
-          setState(() {
-            _locationData = initialLocation;
-          });
-        }
-      }).catchError((e) {
-        log('Error getting initial location on startListener: $e');
-      });
+  Future<bool>? _listenerStarting;
+
+  Future<bool> _doStartListener() async {
+    if (locationStream != null) return true;
+    if (!await ensureLocationPermission(location)) {
+      showSnackBar('location_permission_required'.tr());
+      return false;
     }
+    try {
+      await location.changeSettings(
+          accuracy: LocationAccuracy.high, interval: 1000, distanceFilter: 0);
+    } catch (e) {
+      log('Could not apply location settings: $e');
+    }
+    DataService().isOpen.value = false;
+    _lastCameraTarget = null;
+
+    /// "Allow all the time" is asked for here, at the moment it is needed;
+    /// declined, the route is still recorded while the app is on screen
+    await enableBackgroundMode(location);
+
+    locationStream = location.onLocationChanged.listen(
+      onLocationChange,
+      onError: (Object e) => log('Location stream error: $e'),
+    );
+
+    log('Fetching initial location for startListener...');
+    location.getLocation().timeout(const Duration(seconds: 4)).then((initialLocation) {
+      log('initialLocation fetched for startListener: lat=${initialLocation.latitude}, lng=${initialLocation.longitude}');
+      if (mounted) {
+        setState(() {
+          _locationData = initialLocation;
+        });
+      }
+    }).catchError((e) {
+      log('Error getting initial location on startListener: $e');
+    });
+    return true;
   }
 
   Future<void> _pauseListener() async {
@@ -222,9 +288,12 @@ class _HomePageState extends State<HomePage> {
     _stopListener();
   }
 
+  /// Every end of a recording — pause, stop, clear — goes through here, so
+  /// this is where the foreground service and its notification go away.
   Future<void> _stopListener() async {
     locationStream?.cancel();
     locationStream = null;
+    await disableBackgroundMode(location);
   }
 
   Future<void> _stopTransect() async {
@@ -256,9 +325,7 @@ class _HomePageState extends State<HomePage> {
     DataService().isOpen.value = false;
     setState(() {});
 
-    if (_locationData == null ||
-        _locationData!.latitude == null ||
-        _locationData!.longitude == null) {
+    if (_locationData == null) {
       showSnackBar('getting_current_location'.tr());
       try {
         log('Attempting to fetch location via getLocation() with timeout...');
@@ -269,9 +336,8 @@ class _HomePageState extends State<HomePage> {
       }
     }
 
-    if (_locationData == null ||
-        _locationData!.latitude == null ||
-        _locationData!.longitude == null) {
+    final current = _locationData;
+    if (current == null || !isFiniteLatLng(LatLng(current.latitude, current.longitude))) {
       showSnackBar('location_not_available'.tr());
       return;
     }
@@ -284,8 +350,8 @@ class _HomePageState extends State<HomePage> {
       double distKm = getStraightLineDistance(
           marker.latitude ?? 0,
           marker.longitude ?? 0,
-          _locationData!.latitude!,
-          _locationData!.longitude!);
+          current.latitude,
+          current.longitude);
       double distM = distKm * 1000;
       if (distM < radius && distM < minDistanceMeters) {
         minDistanceMeters = distM;
@@ -392,12 +458,21 @@ class _HomePageState extends State<HomePage> {
     ));
   }
 
-  Future<void> _startTransect() async {
+  /// A quick second tap on the Start button lands while the first one is
+  /// still waiting on the permission dialog; it must not open a second
+  /// transect row.
+  Future<void> _startTransect() =>
+      _transectStarting ??= _doStartTransect().whenComplete(() {
+        _transectStarting = null;
+      });
+
+  Future<void>? _transectStarting;
+
+  Future<void> _doStartTransect() async {
     /// only one transect may be active — an open one is always resumed,
     /// never replaced; a new one requires closing the old one via Stop
     if (transect != null && transect!.endDate == null) {
-      await _startListener();
-      showSnackBar('transect_resumed'.tr());
+      if (await _startListener()) showSnackBar('transect_resumed'.tr());
     } else {
       /// in-memory transect is null (or a closed one viewed from history);
       /// the DB may still hold an open transect — resume it instead of
@@ -406,16 +481,22 @@ class _HomePageState extends State<HomePage> {
       if (openTransects.isNotEmpty) {
         transect = openTransects.first;
         DataService().setTransect(transect);
-        await _startListener();
-        showSnackBar('transect_resumed'.tr());
+        if (await _startListener()) showSnackBar('transect_resumed'.tr());
       } else {
-        _startNewTransect();
+        await _startNewTransect();
       }
     }
     if (mounted) setState(() {});
   }
 
-  void _startNewTransect() {
+  /// Permission first, row second: a transect that never recorded a point
+  /// would otherwise sit open in the database and be offered for resume on
+  /// every launch.
+  Future<void> _startNewTransect() async {
+    if (!await ensureLocationPermission(location)) {
+      showSnackBar('location_permission_required'.tr());
+      return;
+    }
     transect = Transect()
       ..startDate = DateTime.now()
       ..points = List<Point>.empty(growable: true)
@@ -424,7 +505,7 @@ class _HomePageState extends State<HomePage> {
 
     /// insert transect to db
     SembastService().addTransect(transect!);
-    _startListener();
+    await _startListener();
   }
 
   @override
@@ -496,11 +577,14 @@ class _HomePageState extends State<HomePage> {
           }
           _polyLines?.first.points.clear();
           _polyLines?.first.points.addAll(transect?.points
-                  ?.map((e) => LatLng(e.latitude, e.longitude))
+                  ?.map((e) => e.latLng)
+                  .where(isFiniteLatLng)
                   .toList() ??
               []);
-          _markers =
-              Set<Marker>.of(transect?.markers?.map((e) => e.toMarker()) ?? []);
+          _markers = Set<Marker>.of(transect?.markers
+                  ?.where((e) => e.hasFiniteLatLng)
+                  .map((e) => e.toMarker()) ??
+              []);
           return GoogleMap(
             key: const Key('map'),
             // on below line setting camera position
@@ -525,9 +609,10 @@ class _HomePageState extends State<HomePage> {
             buildingsEnabled: false,
             indoorViewEnabled: false,
             // on below line specifying controller on map complete.
-            onMapCreated: (GoogleMapController controller) {
-              _completer.complete(controller);
-              DataService().controller = controller;
+            onMapCreated: (GoogleMapController mapController) {
+              controller = mapController;
+              _completer.complete(mapController);
+              DataService().controller = mapController;
             },
           );
         }),

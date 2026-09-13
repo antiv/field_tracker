@@ -296,6 +296,23 @@ Future<bool> showBackgroundPermissionDeniedDialog() => _showRationaleDialog(
       confirmText: 'open_settings'.tr(),
     );
 
+/// Foreground location was refused for good ("Don't ask again", or revoked in
+/// settings): the system will not show a prompt any more, so the only way
+/// forward is the app's own settings page.
+Future<bool> showLocationDeniedForeverDialog() => _showRationaleDialog(
+      'location_permission_title'.tr(),
+      'location_permission_denied_forever'.tr(),
+      confirmText: 'open_settings'.tr(),
+    );
+
+/// Android 12+ "Approximate location": the grant is real but useless for a
+/// survey route, and a re-request is what shows the upgrade-to-precise prompt.
+Future<bool> showPreciseLocationDialog() => _showRationaleDialog(
+      'location_permission_title'.tr(),
+      'precise_location_required'.tr(),
+      confirmText: 'open_settings'.tr(),
+    );
+
 Future<bool> _showRationaleDialog(String title, String content,
     {String? confirmText}) async {
   bool result = false;

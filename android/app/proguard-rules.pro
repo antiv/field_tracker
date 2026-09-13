@@ -17,7 +17,3 @@
 -keep class com.google.android.gms.dynamic.** { *; }
 -keep class com.google.android.gms.maps.** { *; }
 -keep interface com.google.android.gms.maps.** { *; }
-
-# Keep Isar
--keep class dev.isar.** { *; }
-

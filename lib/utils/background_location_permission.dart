@@ -2,6 +2,7 @@ import 'dart:developer';
 import 'dart:io';
 
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// "Allow all the time" on Android, requested on its own.
 ///
@@ -21,7 +22,19 @@ class BackgroundLocationPermission {
   /// settings page). Resolves once the user is back, with the real state.
   static Future<bool> request() => _invoke('requestBackgroundPermission');
 
+  /// Android 12+ "Approximate location": asks for ACCESS_FINE_LOCATION alone,
+  /// which is what shows the system's upgrade-to-precise dialog — the plugin
+  /// counts coarse as granted and never asks. Resolves with the real state.
+  static Future<bool> requestPrecise() => _invoke('requestPrecisePermission');
+
+  /// The app's own settings page — the only place left once a permission has
+  /// been refused for good. iOS has no channel for it, but its settings URL
+  /// scheme opens the same page.
   static Future<void> openSettings() async {
+    if (Platform.isIOS) {
+      await launchUrl(Uri.parse('app-settings:'));
+      return;
+    }
     if (!Platform.isAndroid) return;
     await _invoke('openAppSettings');
   }

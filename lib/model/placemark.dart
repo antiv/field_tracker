@@ -3,6 +3,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 import '../configuration/field_options.dart';
+import '../utils/geo_utils.dart';
 import '../utils/location_helper.dart';
 
 /// The export columns of one record, in the order of "Vrste za aplikaciju.xlsx".
@@ -78,8 +79,8 @@ class Placemark {
         endDate: json['endDate'] != null
             ? DateTime.parse(json['endDate'] as String)
             : null,
-        latitude: (json['latitude'] as num?)?.toDouble(),
-        longitude: (json['longitude'] as num?)?.toDouble(),
+        latitude: finiteOrNull(json['latitude'] as num?),
+        longitude: finiteOrNull(json['longitude'] as num?),
         altitude: (json['altitude'] as num?)?.toDouble(),
         accuracy: (json['accuracy'] as num?)?.toDouble(),
         description: json['description'] as String?,
@@ -176,4 +177,8 @@ class Placemark {
   LatLng get latLng {
     return LatLng(latitude!, longitude!);
   }
+
+  /// Whether the map can place this point at all.
+  bool get hasFiniteLatLng =>
+      finiteOrNull(latitude) != null && finiteOrNull(longitude) != null;
 }
