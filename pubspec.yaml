@@ -9,5 +9,6 @@ environment:
 workspace:
   - apps/ciconia_tracker
   - packages/tracker_core
+  - packages/tracker_location_permission
   - apps/bird_tracker
   - apps/herp_tracker

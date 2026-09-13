@@ -4,21 +4,17 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../config/tracker_config.dart';
-
 /// "Allow all the time" on Android, requested on its own.
 ///
 /// Android 11+ ignores a permission request that asks for background location
 /// together with the foreground ones — no system prompt appears and neither
 /// permission is granted. The `location` plugin does exactly that inside
 /// `enableBackgroundMode`, so the background grant is handled here through
-/// MainActivity instead. On iOS the plugin's own always-authorization flow is
+/// this plugin instead. On iOS the plugin's own always-authorization flow is
 /// correct, so every call is a no-op success.
 class BackgroundLocationPermission {
-  /// Named after the app's Android package: each app's MainActivity
-  /// registers its own.
-  static MethodChannel get _channel =>
-      MethodChannel(TrackerConfig.current.backgroundLocationChannel);
+  static const MethodChannel _channel =
+      MethodChannel('rs.antonijevic.tracker/background_location');
 
   static Future<bool> isGranted() => _invoke('hasBackgroundPermission');
 
@@ -51,7 +47,7 @@ class BackgroundLocationPermission {
       log('Background location permission $method failed: ${e.message}');
       return false;
     } on MissingPluginException {
-      log('Background location channel missing — old engine attached?');
+      log('Background location channel missing — plugin not registered?');
       return false;
     }
   }

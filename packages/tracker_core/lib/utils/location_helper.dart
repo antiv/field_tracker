@@ -4,7 +4,7 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:tracker_core/service/data_service.dart';
-import 'package:tracker_core/utils/background_location_permission.dart';
+import 'package:tracker_location_permission/tracker_location_permission.dart';
 import 'package:tracker_core/utils/geo_utils.dart';
 import 'package:tracker_core/utils/ux_builder.dart';
 import 'package:flutter/services.dart';

@@ -18,7 +18,6 @@ final TrackerConfig birdConfig = TrackerConfig(
   backupBaseName: 'bird_tracker_backup',
   kmlNamespace: kKmlNamespace,
   kmlPrefix: 'bt',
-  androidPackage: 'rs.antonijevic.bird_tracker',
   speciesCatalog: kSpecies,
   speciesTranslationKey: speciesTranslationKey,
   recordFromJson: BirdRecord.fromJson,

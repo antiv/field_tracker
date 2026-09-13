@@ -21,7 +21,6 @@ final TrackerConfig ciconiaConfig = TrackerConfig(
   backupBaseName: 'ciconia_tracker_backup',
   kmlNamespace: kKmlNamespace,
   kmlPrefix: 'ct',
-  androidPackage: 'rs.antonijevic.ciconia_tracker',
   speciesCatalog: null,
   singleRecordPerPoint: true,
   recordFromJson: NestRecord.fromJson,

@@ -73,7 +73,6 @@ class TrackerConfig {
     required this.backupBaseName,
     required this.kmlNamespace,
     required this.kmlPrefix,
-    required this.androidPackage,
     required this.speciesCatalog,
     this.speciesTranslationKey = defaultSpeciesTranslationKey,
     this.singleRecordPerPoint = false,
@@ -108,10 +107,6 @@ class TrackerConfig {
   /// Namespace and prefix of the app's private KML ExtendedData payload.
   final String kmlNamespace;
   final String kmlPrefix;
-
-  /// Android application id; the MainActivity method channel is named after
-  /// it (`<package>/background_location`).
-  final String androidPackage;
 
   // ── Domain ────────────────────────────────────────────────────────────
 
@@ -166,9 +161,6 @@ class TrackerConfig {
   }
 
   static set current(TrackerConfig config) => _current = config;
-
-  /// Name of the MainActivity method channel.
-  String get backgroundLocationChannel => '$androidPackage/background_location';
 }
 
 /// easy_localization reads a dot in a key as a path separator, so a species

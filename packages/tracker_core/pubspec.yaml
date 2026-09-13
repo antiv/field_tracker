@@ -9,6 +9,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  tracker_location_permission:
+    path: ../tracker_location_permission
   google_maps_flutter: ^2.18.0
   location: ^10.0.2
   flutter_svg: ^2.3.0

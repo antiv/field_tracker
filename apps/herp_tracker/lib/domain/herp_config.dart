@@ -19,7 +19,6 @@ final TrackerConfig herpConfig = TrackerConfig(
   backupBaseName: 'herp_tracker_backup',
   kmlNamespace: kKmlNamespace,
   kmlPrefix: 'herp',
-  androidPackage: 'rs.antonijevic.herp_tracker',
   speciesCatalog: kSpecies,
   speciesTranslationKey: speciesKey,
   recordFromJson: HerpRecord.fromJson,

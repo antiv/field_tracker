@@ -85,7 +85,6 @@ TrackerConfig testConfig({
       backupBaseName: 'test_tracker_backup',
       kmlNamespace: 'https://antonijevic.rs/test_tracker',
       kmlPrefix: 'tt',
-      androidPackage: 'rs.antonijevic.test_tracker',
       speciesCatalog: catalog,
       singleRecordPerPoint: singleRecordPerPoint,
       recordFromJson: TestRecord.fromJson,
