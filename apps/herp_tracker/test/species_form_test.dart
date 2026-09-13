@@ -6,11 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herp_tracker/configuration/field_options.dart';
 import 'package:herp_tracker/configuration/species.dart';
-import 'package:herp_tracker/model/species.dart';
-import 'package:herp_tracker/service/data_service.dart';
-import 'package:herp_tracker/service/media_service.dart';
-import 'package:herp_tracker/widgets/species_form.dart';
+import 'package:herp_tracker/domain/herp_config.dart';
+import 'package:herp_tracker/domain/herp_record.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tracker_core/testing.dart';
+import 'package:tracker_core/tracker_core.dart';
 
 /// EasyLocalization loads its JSON off the real asset bundle, which only
 /// resolves inside [WidgetTester.runAsync] — without it the widget never gets
@@ -18,20 +18,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 Future<void> pumpForm(WidgetTester tester, Widget child,
     {Locale? startLocale}) async {
   await tester.runAsync(() async {
-    await tester.pumpWidget(EasyLocalization(
-      supportedLocales: const [Locale('en'), Locale('sr', 'Latn')],
-      path: 'assets/translations',
-      fallbackLocale: const Locale('en'),
-      startLocale: startLocale,
-      child: Builder(
-        builder: (context) => MaterialApp(
-          localizationsDelegates: context.localizationDelegates,
-          supportedLocales: context.supportedLocales,
-          locale: context.locale,
-          home: Scaffold(body: child),
-        ),
-      ),
-    ));
+    await tester.pumpWidget(localizedTestApp(
+        home: Scaffold(body: child), startLocale: startLocale));
     await tester.pump();
   });
   await tester.pumpAndSettle();
@@ -42,6 +30,7 @@ late Directory mediaRoot;
 void main() {
   setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
+    TrackerConfig.current = herpConfig;
     SharedPreferences.setMockInitialValues({});
     await EasyLocalization.ensureInitialized();
     await DataService().initPreferences();
@@ -58,7 +47,7 @@ void main() {
 
   testWidgets('shows the basic fields and hides the automatic ones',
       (tester) async {
-    await pumpForm(tester, const SpeciesForm());
+    await pumpForm(tester, const RecordFormShell());
 
     expect(find.text('Species'), findsOneWidget);
     expect(find.text('Locality'), findsOneWidget);
@@ -90,9 +79,11 @@ void main() {
   });
 
   testWidgets('saves a record with an automatic timestamp', (tester) async {
-    Species? saved;
+    HerpRecord? saved;
     await pumpForm(
-        tester, SpeciesForm(onSaved: (species, close) => saved = species));
+        tester,
+        RecordFormShell(
+            onSaved: (record, close) => saved = record as HerpRecord));
 
     await tester.enterText(
         find.byType(EditableText).first, 'Salamandra salamandra');
@@ -112,7 +103,7 @@ void main() {
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
 
-    await pumpForm(tester, const SpeciesForm(),
+    await pumpForm(tester, const RecordFormShell(),
         startLocale: const Locale('sr', 'Latn'));
 
     expect(find.text('Lokalitet'), findsOneWidget);
@@ -133,17 +124,18 @@ void main() {
   testWidgets('editing a record leaves its photos on disk', (tester) async {
     const photo = 'HT_20260504_211530_0a1b.jpg';
 
-    final existing = Species()
+    final existing = HerpRecord()
       ..species = 'Bombina variegata'
       ..observedAt = DateTime(2026, 5, 4, 10)
       ..count = 2
       ..photos = [photo];
 
-    Species? saved;
+    HerpRecord? saved;
     await pumpForm(
         tester,
-        SpeciesForm(
-            species: existing, onSaved: (species, close) => saved = species));
+        RecordFormShell(
+            existing: existing,
+            onSaved: (record, close) => saved = record as HerpRecord));
 
     /// written after the pump on purpose: an Image.file that resolves starts
     /// an image decode the test binding only completes inside runAsync, and
@@ -165,13 +157,13 @@ void main() {
 
   testWidgets('opens Advanced when editing a record that uses it',
       (tester) async {
-    final existing = Species()
+    final existing = HerpRecord()
       ..species = 'Bombina variegata'
       ..observedAt = DateTime(2026, 5, 4, 10)
       ..count = 2
       ..habitat = HabitatType.puddle;
 
-    await pumpForm(tester, SpeciesForm(species: existing));
+    await pumpForm(tester, RecordFormShell(existing: existing));
 
     expect(find.text('Puddle'), findsOneWidget);
     // editing an existing record offers Save only, not "Save and new"

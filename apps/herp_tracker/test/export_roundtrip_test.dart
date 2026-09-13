@@ -1,19 +1,17 @@
 import 'dart:convert';
 
 import 'package:easy_localization/easy_localization.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:xml/xml.dart';
 import 'package:herp_tracker/configuration/field_options.dart';
-import 'package:herp_tracker/model/placemark.dart';
-import 'package:herp_tracker/model/point.dart';
-import 'package:herp_tracker/model/species.dart';
-import 'package:herp_tracker/model/transect.dart';
-import 'package:herp_tracker/utils/kml_utils.dart';
+import 'package:herp_tracker/domain/herp_config.dart';
+import 'package:herp_tracker/domain/herp_record.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tracker_core/testing.dart';
+import 'package:tracker_core/tracker_core.dart';
+import 'package:xml/xml.dart';
 
 Transect buildTransect() {
-  final record = Species()
+  final record = HerpRecord()
     ..species = 'Bufo bufo'
     ..observedAt = DateTime(2026, 5, 4, 21, 15, 30)
     ..locality = 'Deliblatska peščara'
@@ -28,7 +26,7 @@ Transect buildTransect() {
     ..note = 'Uz put, "kod mosta"; kiša'
     ..photos = ['HT_20260504_211530_0a1b.jpg', 'weird, name.jpg'];
 
-  final second = Species()
+  final second = HerpRecord()
     ..species = 'Natrix natrix'
     ..observedAt = DateTime(2026, 5, 4, 21, 40, 0)
     ..count = 1;
@@ -52,7 +50,7 @@ Transect buildTransect() {
         longitude: 20.361234,
         altitude: 117.4,
         accuracy: 4.8,
-        species: [record, second],
+        records: [record, second],
       )
     ];
 }
@@ -60,6 +58,7 @@ Transect buildTransect() {
 void main() {
   setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
+    TrackerConfig.current = herpConfig;
     SharedPreferences.setMockInitialValues({});
     await EasyLocalization.ensureInitialized();
   });
@@ -90,7 +89,7 @@ void main() {
     expect(marker.altitude, 38.9);
     expect(marker.accuracy, 16.2);
 
-    final record = marker.species!.single;
+    final record = marker.records!.single as HerpRecord;
     expect(record.species, 'Salamandra salamandra');
     expect(record.count, 1);
     expect(record.stage, DevelopmentStage.adult);
@@ -142,19 +141,10 @@ void main() {
 
   testWidgets('the KML balloon shows every field as its own row',
       (tester) async {
-    await tester.pumpWidget(EasyLocalization(
-      supportedLocales: const [Locale('en'), Locale('sr', 'Latn')],
-      path: 'assets/translations',
-      fallbackLocale: const Locale('en'),
-      child: Builder(
-        builder: (context) => MaterialApp(
-          localizationsDelegates: context.localizationDelegates,
-          supportedLocales: context.supportedLocales,
-          locale: context.locale,
-          home: const SizedBox(),
-        ),
-      ),
-    ));
+    await tester.runAsync(() async {
+      await tester.pumpWidget(localizedTestApp());
+      await tester.pump();
+    });
     await tester.pumpAndSettle();
 
     final kml = buildTransect().toKML();
@@ -188,25 +178,16 @@ void main() {
     /// the machine payload stays, namespaced so viewers skip it
     expect(
         placemark
-            .findAllElements(kRecordsDataName, namespaceUri: kHerpNamespace)
+            .findAllElements(kRecordsDataName, namespaceUri: kKmlNamespace)
             .length,
         1);
   });
 
   testWidgets('CSV and KML carry every record field', (tester) async {
-    await tester.pumpWidget(EasyLocalization(
-      supportedLocales: const [Locale('en'), Locale('sr', 'Latn')],
-      path: 'assets/translations',
-      fallbackLocale: const Locale('en'),
-      child: Builder(
-        builder: (context) => MaterialApp(
-          localizationsDelegates: context.localizationDelegates,
-          supportedLocales: context.supportedLocales,
-          locale: context.locale,
-          home: const SizedBox(),
-        ),
-      ),
-    ));
+    await tester.runAsync(() async {
+      await tester.pumpWidget(localizedTestApp());
+      await tester.pump();
+    });
     await tester.pumpAndSettle();
 
     /// the CSV/KML share buttons use these as plain labels — nesting a block
@@ -249,7 +230,7 @@ void main() {
     expect(marker.accuracy, 4.8);
     expect(restored.points!.length, 1);
 
-    final back = marker.species!.first;
+    final back = marker.records!.first as HerpRecord;
     expect(back.species, 'Bufo bufo');
     expect(back.observedAt, DateTime(2026, 5, 4, 21, 15, 30));
     expect(back.locality, 'Deliblatska peščara');
@@ -263,7 +244,7 @@ void main() {
     expect(back.waterBed, WaterBedType.muddy);
     expect(back.note, 'Uz put, "kod mosta"; kiša');
     expect(back.photos, ['HT_20260504_211530_0a1b.jpg', 'weird, name.jpg']);
-    expect(marker.species!.last.photos, isEmpty);
-    expect(marker.species!.last.species, 'Natrix natrix');
+    expect(marker.records!.last.photos, isEmpty);
+    expect(marker.records!.last.species, 'Natrix natrix');
   });
 }
