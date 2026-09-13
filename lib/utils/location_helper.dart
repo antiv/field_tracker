@@ -1,39 +1,71 @@
 import 'dart:async';
 import 'dart:developer';
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:herp_tracker/service/data_service.dart';
 import 'package:herp_tracker/utils/background_location_permission.dart';
+import 'package:herp_tracker/utils/geo_utils.dart';
 import 'package:herp_tracker/utils/ux_builder.dart';
+import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 
 import '../widgets/marker_info.dart';
 
-Future<LocationData?> goToCurrentLocation(
-    bool serviceEnabled,
-    Location location,
-    LocationData? locationData,
-    GoogleMapController? controller,
-    Completer<GoogleMapController> completer) async {
-  serviceEnabled = await location.serviceEnabled();
+/// Location service on and foreground permission granted — the one gate every
+/// path that starts location updates has to pass. It is deliberately not
+/// cached: an "Only this time" grant expires while the app sits in the
+/// background, and the user can revoke it in settings at any moment. The
+/// `location` plugin used to start updates in `changeSettings` without
+/// checking, and Android answered with a SecurityException that no Dart code
+/// could catch — the top crash Bird Tracker hit in production with this
+/// same code.
+Future<bool> ensureLocationPermission(Location location) async {
+  bool serviceEnabled = await location.serviceEnabled();
   if (!serviceEnabled) {
     serviceEnabled = await location.requestService();
-    if (!serviceEnabled) {
-      return null;
-    }
+    if (!serviceEnabled) return false;
   }
 
-  PermissionStatus permissionGranted = await location.hasPermission();
-  if (permissionGranted == PermissionStatus.denied) {
-    bool ok = await showPermissionInfoDialog();
-    if (!ok) return null;
+  PermissionStatus status = await location.hasPermission();
+  if (status == PermissionStatus.granted) return true;
 
-    permissionGranted = await location.requestPermission();
-    if (permissionGranted != PermissionStatus.granted) {
-      return null;
-    }
+  if (status == PermissionStatus.denied) {
+    if (!await showPermissionInfoDialog()) return false;
+    status = await location.requestPermission();
+    if (status == PermissionStatus.granted) return true;
   }
+
+  /// "Approximate location" (Android 12+) or the iOS reduced-accuracy
+  /// switch: a route recorded with it is worthless. Android offers an
+  /// upgrade-to-precise dialog, but only to a request for FINE alone — the
+  /// plugin's own `requestPermission` returns at once because coarse already
+  /// counts as granted — so that request goes through MainActivity. iOS has
+  /// no such prompt; the switch lives in Settings.
+  if (status == PermissionStatus.grantedLimited) {
+    if (Platform.isAndroid &&
+        await BackgroundLocationPermission.requestPrecise()) {
+      return true;
+    }
+    if (await showPreciseLocationDialog()) {
+      await BackgroundLocationPermission.openSettings();
+    }
+    return false;
+  }
+
+  if (status == PermissionStatus.deniedForever &&
+      await showLocationDeniedForeverDialog()) {
+    await BackgroundLocationPermission.openSettings();
+  }
+  return false;
+}
+
+Future<LocationData?> goToCurrentLocation(
+    Location location,
+    GoogleMapController? controller,
+    Completer<GoogleMapController> completer) async {
+  if (!await ensureLocationPermission(location)) return null;
 
   LocationData currentLoc;
   try {
@@ -42,41 +74,34 @@ Future<LocationData?> goToCurrentLocation(
     log('Error getting current location: ${e.toString()}');
     return null;
   }
-  if (currentLoc.latitude == null || currentLoc.longitude == null) {
-    return null;
-  }
+  final target = LatLng(currentLoc.latitude, currentLoc.longitude);
+  if (!isFiniteLatLng(target)) return null;
 
-  // specified current users location
-  CameraPosition cameraPosition = CameraPosition(
-    target: LatLng(currentLoc.latitude!, currentLoc.longitude!),
-    zoom: 16,
-  );
-  await enableBackgroundMode(location);
-
-  /// if controller is not initialized, wait for it
-  // if (!_controller.isCompleted) {
-  //   controller = await _controller.future;
-  // }
-  controller ??= await completer.future;
-  controller.animateCamera(CameraUpdate.newCameraPosition(cameraPosition));
-  // });
+  await goToLocation(target, controller, completer);
   return currentLoc;
 }
 
-Future<void> goToLocation(
-    LatLng locationData, GoogleMapController? controller, Completer<GoogleMapController> completer) async {
-  CameraPosition cameraPosition = CameraPosition(
-    target: locationData,
-    zoom: 16,
-  );
+Future<void> goToLocation(LatLng target, GoogleMapController? controller,
+    Completer<GoogleMapController> completer) async {
+  if (!isFiniteLatLng(target)) return;
   controller ??= await completer.future;
-  controller.animateCamera(CameraUpdate.newCameraPosition(cameraPosition));
+  try {
+    await controller.animateCamera(
+        CameraUpdate.newCameraPosition(CameraPosition(target: target, zoom: 16)));
+  } on PlatformException catch (e) {
+    log('Could not move the camera: ${e.message}');
+  }
 }
 
 /// Asked at most once per app run: the user who says no should not get the
-/// dialog again on every tap of the my-location button.
+/// dialog again on every start of a transect.
 bool _backgroundPermissionAsked = false;
 
+/// Background updates cost a foreground service with a permanent notification
+/// on Android and "Always" authorization on iOS, so they are switched on only
+/// for the duration of a recording — [disableBackgroundMode] is its pair.
+/// Used to run on every launch and my-location tap, which left the service
+/// (and its notification) up with no transect in progress.
 Future<bool> enableBackgroundMode(
   Location location,
 ) async {
@@ -102,6 +127,16 @@ Future<bool> enableBackgroundMode(
   return bgModeEnabled;
 }
 
+Future<void> disableBackgroundMode(Location location) async {
+  try {
+    if (await location.isBackgroundModeEnabled()) {
+      await location.enableBackgroundMode(enable: false);
+    }
+  } catch (e) {
+    log('Error disabling background mode: ${e.toString()}');
+  }
+}
+
 /// No-op on iOS, where the plugin's own always-authorization flow is correct.
 Future<bool> ensureBackgroundPermission() async {
   if (await BackgroundLocationPermission.isGranted()) return true;
@@ -120,7 +155,7 @@ Future<bool> ensureBackgroundPermission() async {
 Marker getNewMarker(String id, LocationData locationData, Function onTap) {
   return Marker(
     markerId: MarkerId(id),
-    position: LatLng(locationData.latitude!, locationData.longitude!),
+    position: LatLng(locationData.latitude, locationData.longitude),
     infoWindow: InfoWindow(title: 'Point $id'),
     icon: BitmapDescriptor.defaultMarker,
     //BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),

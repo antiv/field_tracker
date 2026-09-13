@@ -258,5 +258,8 @@
   "delete_photo": "Remove this photo?",
   "photo_camera_failed": "Could not take the photo",
   "photo_gallery_pick_failed": "Could not open the gallery",
-  "photo_gallery_failed": "Photo saved to the record, but not to the gallery"
+  "photo_gallery_failed": "Photo saved to the record, but not to the gallery",
+  "location_permission_required": "Recording a transect needs access to your location. Allow it to start.",
+  "location_permission_denied_forever": "Location access is turned off for Herp Tracker, so a transect cannot be recorded.\n\nYou can turn it on in the app settings: Permissions → Location.",
+  "precise_location_required": "Herp Tracker needs precise location to record the route and the findings. Approximate location is not enough.\n\nIn the app settings, under Permissions → Location, turn on \"Use precise location\"."
 }

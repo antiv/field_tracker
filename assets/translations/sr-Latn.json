@@ -258,5 +258,8 @@
   "delete_photo": "Ukloniti ovu fotografiju?",
   "photo_camera_failed": "Fotografisanje nije uspelo",
   "photo_gallery_pick_failed": "Galerija se ne može otvoriti",
-  "photo_gallery_failed": "Fotografija je sačuvana uz zapis, ali ne i u galeriju"
+  "photo_gallery_failed": "Fotografija je sačuvana uz zapis, ali ne i u galeriju",
+  "location_permission_required": "Za beleženje transekta potreban je pristup lokaciji. Dozvolite ga da biste započeli.",
+  "location_permission_denied_forever": "Pristup lokaciji je isključen za Herp Tracker, pa transekt ne može da se beleži.\n\nMožete ga uključiti u podešavanjima aplikacije: Dozvole → Lokacija.",
+  "precise_location_required": "Herp Tracker-u je potrebna precizna lokacija da bi beležio rutu i nalaze. Približna lokacija nije dovoljna.\n\nU podešavanjima aplikacije, pod Dozvole → Lokacija, uključite \"Koristi preciznu lokaciju\"."
 }

@@ -12,6 +12,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../service/data_service.dart';
 import '../utils/file_utils.dart';
+import '../utils/geo_utils.dart';
 import '../utils/location_helper.dart';
 
 class Transect {
@@ -43,6 +44,7 @@ class Transect {
     ..description = json['description'] as String?
     ..points = (json['points'] as List<dynamic>?)
             ?.map((p) => Point.fromJson(p as Map<String, dynamic>))
+            .nonNulls
             .toList() ??
         []
     ..markers = (json['markers'] as List<dynamic>?)
@@ -218,14 +220,13 @@ class Transect {
   }
 
   void goToFirst() {
-    if (points?.isNotEmpty ?? false) {
-      goToLocation(points!.first.latLng, DataService().controller,
-          DataService().completer);
-    } else {
-      if (markers?.isNotEmpty ?? false) {
-        goToLocation(markers!.first.latLng, DataService().controller,
-            DataService().completer);
-      }
+    final first = points?.map((p) => p.latLng).where(isFiniteLatLng).firstOrNull ??
+        markers
+            ?.where((m) => m.hasFiniteLatLng)
+            .map((m) => m.latLng)
+            .firstOrNull;
+    if (first != null) {
+      goToLocation(first, DataService().controller, DataService().completer);
     }
   }
 }

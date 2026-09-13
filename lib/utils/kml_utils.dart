@@ -5,10 +5,12 @@ import 'dart:developer';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:herp_tracker/model/species.dart';
 import 'package:herp_tracker/model/transect.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:xml/xml.dart';
 
 import '../model/placemark.dart';
 import '../model/point.dart';
+import 'geo_utils.dart';
 
 /// Name of the ExtendedData entry carrying the machine-readable records.
 ///
@@ -229,12 +231,13 @@ class KMLUtils {
       if (point.isNotEmpty) {
         final coordinates =
             point.first.findElements('coordinates').first.innerText;
-        final pointString = coordinates.split(',');
+        final latLng = _parseCoordinate(coordinates);
+        if (latLng == null) continue;
         final record = _readRecords(placemark);
         markers.add(Placemark()
           ..id = markers.length
-          ..latitude = double.parse(pointString[1])
-          ..longitude = double.parse(pointString[0])
+          ..latitude = latLng.latitude
+          ..longitude = latLng.longitude
           ..altitude = (record?['altitude'] as num?)?.toDouble()
           ..accuracy = (record?['accuracy'] as num?)?.toDouble()
           ..startDate = DateTime.tryParse(record?['startDate'] as String? ?? '')
@@ -252,21 +255,32 @@ class KMLUtils {
       if (lineString.isNotEmpty) {
         final coord = lineString.first.findElements('coordinates');
         final coordinates = coord.isNotEmpty ? coord.first.innerText : '';
-        final pointsString = coordinates.split(' ');
-        for (final pointString in pointsString) {
-          final point = pointString.trim().split(',');
-          if (point.length < 2) {
-            continue;
-          }
+        /// Google Earth separates the tuples with newlines and tabs, not
+        /// only spaces; split on any run of whitespace or such a route
+        /// imports as empty without a word of complaint
+        for (final pointString in coordinates.split(RegExp(r'\s+'))) {
+          final latLng = _parseCoordinate(pointString);
+          if (latLng == null) continue;
           points.add(Point()
-            ..latitude = double.parse(point[1])
-            ..longitude = double.parse(point[0]));
+            ..latitude = latLng.latitude
+            ..longitude = latLng.longitude);
         }
       }
     }
     transect.markers = markers;
     transect.points = points;
     return transect;
+  }
+
+  /// A KML `lon,lat[,alt]` tuple, or null when it is not one the map could
+  /// place: `double.parse` accepts "NaN" and the renderer does not.
+  static LatLng? _parseCoordinate(String tuple) {
+    final parts = tuple.trim().split(',');
+    if (parts.length < 2) return null;
+    final latitude = finiteOrNull(double.tryParse(parts[1]));
+    final longitude = finiteOrNull(double.tryParse(parts[0]));
+    if (latitude == null || longitude == null) return null;
+    return LatLng(latitude, longitude);
   }
 
   /// Google Earth renders a CDATA description as HTML, so the images show up

@@ -34,6 +34,7 @@ class MainActivity : FlutterActivity() {
         when (call.method) {
             "hasBackgroundPermission" -> result.success(hasBackgroundPermission())
             "requestBackgroundPermission" -> requestBackgroundPermission(result)
+            "requestPrecisePermission" -> requestPrecisePermission(result)
             "openAppSettings" -> {
                 startActivity(
                     Intent(
@@ -57,11 +58,34 @@ class MainActivity : FlutterActivity() {
             ) == PackageManager.PERMISSION_GRANTED
         }
 
+    private fun hasPrecisePermission(): Boolean =
+        ContextCompat.checkSelfPermission(
+            this, Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+
     private fun requestBackgroundPermission(result: MethodChannel.Result) {
         if (hasBackgroundPermission()) {
             result.success(true)
             return
         }
+        request(result, Manifest.permission.ACCESS_BACKGROUND_LOCATION, BACKGROUND_PERMISSION_REQUEST_CODE)
+    }
+
+    /**
+     * "Approximate location" (Android 12+) is a real grant of COARSE only. The
+     * `location` plugin treats coarse as granted and returns at once, so it
+     * never shows the system's upgrade-to-precise dialog; a request for
+     * ACCESS_FINE_LOCATION on its own is what brings that dialog up.
+     */
+    private fun requestPrecisePermission(result: MethodChannel.Result) {
+        if (hasPrecisePermission()) {
+            result.success(true)
+            return
+        }
+        request(result, Manifest.permission.ACCESS_FINE_LOCATION, PRECISE_PERMISSION_REQUEST_CODE)
+    }
+
+    private fun request(result: MethodChannel.Result, permission: String, requestCode: Int) {
         if (pendingResult != null) {
             /// a request is already on screen — never leave two Dart futures
             /// waiting on a single system callback
@@ -69,11 +93,7 @@ class MainActivity : FlutterActivity() {
             return
         }
         pendingResult = result
-        ActivityCompat.requestPermissions(
-            this,
-            arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION),
-            BACKGROUND_PERMISSION_REQUEST_CODE
-        )
+        ActivityCompat.requestPermissions(this, arrayOf(permission), requestCode)
     }
 
     override fun onRequestPermissionsResult(
@@ -82,12 +102,17 @@ class MainActivity : FlutterActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode != BACKGROUND_PERMISSION_REQUEST_CODE) return
 
-        /// On Android 11+ the request opens the app's location settings page
-        /// rather than a dialog, and comes back with empty grantResults, so
-        /// the live permission state is the only reliable answer here.
-        pendingResult?.success(hasBackgroundPermission())
+        /// On Android 11+ the background request opens the app's location
+        /// settings page rather than a dialog, and comes back with empty
+        /// grantResults, so the live permission state is the only reliable
+        /// answer here.
+        val granted = when (requestCode) {
+            BACKGROUND_PERMISSION_REQUEST_CODE -> hasBackgroundPermission()
+            PRECISE_PERMISSION_REQUEST_CODE -> hasPrecisePermission()
+            else -> return
+        }
+        pendingResult?.success(granted)
         pendingResult = null
     }
 
@@ -96,5 +121,6 @@ class MainActivity : FlutterActivity() {
 
         /// distinct from the location plugin's own request code
         private const val BACKGROUND_PERMISSION_REQUEST_CODE = 4211
+        private const val PRECISE_PERMISSION_REQUEST_CODE = 4212
     }
 }

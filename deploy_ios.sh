@@ -101,11 +101,11 @@ echo "==> flutter build ios (release, --no-codesign)"
 $FLUTTER build ios --config-only
 
 # flutter build ios --config-only generiše FlutterGeneratedPluginSwiftPackage/Package.swift sa
-# .iOS("13.0") (Flutter SDK minimum), ali file_picker 12+ zahteva .iOS("14.0").
+# .iOS("13.0") (Flutter SDK minimum), a projekat cilja iOS 15 (file_picker 12+ traži bar 14).
 # Patch primenjujemo PRE samog build-a kako ne bi pukao zbog Target Integrity provjere.
 SPM_PKG="ios/Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage/Package.swift"
 if [[ -f "$SPM_PKG" ]]; then
-  sed -i '' 's/.iOS("13.0")/.iOS("14.0")/' "$SPM_PKG"
+  sed -i '' 's/.iOS("13.0")/.iOS("15.0")/' "$SPM_PKG"
 fi
 
 $FLUTTER build ios --release --no-codesign
