@@ -52,10 +52,13 @@ echo "Building Android AppBundle..."
 # I added obfuscation options to reduce the AppBundle size further as we discussed earlier.
 fvm flutter build appbundle --release --obfuscate --split-debug-info=build/app/outputs/symbols
 
+# Named after the app, so the same script serves every tracker.
+AAB_NAME="$(grep '^name: ' pubspec.yaml | awk '{print $2}').aab"
+
 if [ -f "build/app/outputs/bundle/release/app-release.aab" ]; then
     echo "Copying AAB to project root..."
-    cp build/app/outputs/bundle/release/app-release.aab herp_tracker.aab
-    echo "Success! Clean and optimized AppBundle is ready at: herp_tracker.aab"
+    cp build/app/outputs/bundle/release/app-release.aab "$AAB_NAME"
+    echo "Success! Clean and optimized AppBundle is ready at: $AAB_NAME"
 else
     echo "Error: Build finished, but AppBundle was not found in the expected directory."
     exit 1
