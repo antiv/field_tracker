@@ -5,6 +5,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herp_tracker/configuration/field_options.dart';
+import 'package:herp_tracker/configuration/species.dart';
 import 'package:herp_tracker/model/species.dart';
 import 'package:herp_tracker/service/data_service.dart';
 import 'package:herp_tracker/service/media_service.dart';
@@ -175,5 +176,19 @@ void main() {
     expect(find.text('Puddle'), findsOneWidget);
     // editing an existing record offers Save only, not "Save and new"
     expect(find.text('Save and new'), findsNothing);
+  });
+
+  testWidgets('every species in the catalog has a common name', (tester) async {
+    /// easy_localization walks a key as a path through the JSON, so a Latin
+    /// name carrying a dot ("Pelophylax kl. esculentus") used to resolve to
+    /// nothing and render as the raw key. [speciesKey] strips it; this
+    /// catches the next name that needs the same treatment.
+    await pumpForm(tester, const SizedBox());
+
+    final untranslated = [
+      for (final latin in kSpecies)
+        if (speciesLabel(latin) == speciesKey(latin)) latin
+    ];
+    expect(untranslated, isEmpty);
   });
 }
