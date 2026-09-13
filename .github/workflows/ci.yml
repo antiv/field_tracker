@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      # `.env` is a bundled asset; the build refuses to run without the file.
+      # Keys are only needed at runtime on a device, so an empty one will do.
+      - name: Create empty .env for each app
+        run: for app in apps/*/; do touch "$app/.env"; done
+
+      - name: Analyze and test every workspace member
+        run: FLUTTER=flutter tool/check_all.sh

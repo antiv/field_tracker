@@ -201,7 +201,7 @@ void showFullScreenDialog(Widget widget, {String? title}) {
     barrierDismissible: false,
     barrierLabel: 'Dialog',
     transitionDuration: const Duration(milliseconds: 400),
-    pageBuilder: (_, __, ___) {
+    pageBuilder: (_, _, _) {
       return Scaffold(
         appBar: AppBar(
           elevation: 0,

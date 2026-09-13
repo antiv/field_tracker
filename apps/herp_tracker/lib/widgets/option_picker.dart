@@ -156,7 +156,7 @@ class _OptionSearchDialogState<T> extends State<_OptionSearchDialog<T>> {
               child: ListView.separated(
                 shrinkWrap: true,
                 itemCount: filtered.length,
-                separatorBuilder: (_, __) => const Divider(height: 1),
+                separatorBuilder: (_, _) => const Divider(height: 1),
                 itemBuilder: (context, index) => ListTile(
                   dense: true,
                   title: Text(optionLabel(filtered[index])),
