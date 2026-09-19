@@ -28,7 +28,7 @@ dev_dependencies:
   shared_preferences: ^2.5.5
   xml: ^7.0.1
   flutter_lints: ^6.0.0
-  flutter_launcher_icons: ^0.13.1
+  flutter_launcher_icons: ^0.14.4
 
 flutter:
   uses-material-design: true

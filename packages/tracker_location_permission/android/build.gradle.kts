@@ -1,11 +1,12 @@
-// Built as part of each app's Gradle project: the Android Gradle plugin and
-// Kotlin versions come from the app's settings, so none are pinned here.
+// Built as part of each app's Gradle project: the Android Gradle plugin
+// version comes from the app's settings, so none is pinned here. Kotlin is
+// AGP's built-in one (Flutter 3.47+); applying the Kotlin Gradle plugin here
+// is what the tool now warns about.
 group = "rs.antonijevic.tracker_location_permission"
 version = "1.0"
 
 plugins {
     id("com.android.library")
-    id("org.jetbrains.kotlin.android")
 }
 
 android {

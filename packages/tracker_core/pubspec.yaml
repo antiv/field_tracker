@@ -23,7 +23,7 @@ dependencies:
   shared_preferences: ^2.5.5
   share_plus: ^13.2.0
   xml: ^7.0.1
-  file_picker: ^12.1.2
+  file_picker: ^13.1.0
   collection: any
   flutter_dotenv: ^6.0.1
   url_launcher: ^6.3.2
