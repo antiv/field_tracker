@@ -36,7 +36,7 @@ Three things bite when testing anything photo-related: `dart:io` futures never r
 
 Every app is a complete Flutter project: its own `pubspec.yaml` (name, `X.Y.Z+N` version, assets), `android/`, `ios/`, `.env`, scripts. `tracker_core` has no version of its own; when it changes, every app is released on its own schedule with its own bump.
 
-- **Android**: `cd apps/<app> && ./build_release.sh [--bump]` — cleans, builds obfuscated appbundle, copies to `<app name>.aab` in the app directory. `--bump` increments patch+build in pubspec.
+- **Android**: `cd apps/<app> && ./build_release.sh [--bump] [--upload]` — cleans, builds obfuscated appbundle, copies to `<app name>.aab` in the app directory. `--bump` increments patch+build in pubspec. `--upload` then pushes the bundle to the Play **internal** track (`PLAY_TRACK` in `android/deploy.env` overrides) through `tool/play_upload.py`, one Play Developer API edit driven by a service account key — needs `python3` with `google-api-python-client`; every precondition is checked before the bump and the build. The API cannot make an app's *first* upload — Play insists that one goes through the console by hand (ciconia still needs it). The upload is not per app: the same script and the same service account serve all three.
 - **iOS**: `cd apps/<app> && ./deploy_ios.sh` — full build + signed export + upload to App Store Connect via API key. **Bumps version by default**; use `--no-bump` if the version was already bumped, `--no-upload` to only produce the .ipa. Requires `ios/deploy.env` (see `ios/deploy.env.example`). The script patches the generated SPM `Package.swift` from iOS 13 → 15 (the project minimum; file_picker alone needs 14) before building — don't "fix" that seemingly redundant sed. The export options differ per app (bird: manual profile, herp: automatic) — that is per-app configuration, not drift.
 
 Apple requires a new build number for every App Store Connect upload.
@@ -46,6 +46,7 @@ Apple requires a new build number for every App Store Connect upload.
 - **`apps/<app>/.env`** — bundled as a Flutter asset and required at runtime (`runTrackerApp` crashes without it). Keys: `MAPS_API_KEY` (+ optional `MAPS_API_KEY_ANDROID` / `MAPS_API_KEY_IOS` overrides), `PRIVACY_POLICY_URL`. Maps keys are restricted per package/bundle, so each app needs its own file. Consumed in three places: Dart via flutter_dotenv, Android via `build.gradle.kts` → manifest placeholder `${mapsApiKey}`, iOS via `AppDelegate.swift` which parses the bundled asset at runtime. CI creates an empty one.
 - **`apps/<app>/android/key.properties`** — release keystore config for Android signing.
 - **`apps/<app>/ios/deploy.env`** — App Store Connect API key credentials for deploy_ios.sh.
+- **`apps/<app>/android/deploy.env`** — `PLAY_SERVICE_ACCOUNT_JSON`, the path to the service account key for `build_release.sh --upload` (see `android/deploy.env.example` for the one-time Cloud Console / Play Console setup). The key itself lives outside the repo.
 
 ## Architecture
 

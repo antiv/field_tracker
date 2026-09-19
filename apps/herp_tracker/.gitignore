@@ -57,6 +57,7 @@ android/key.properties
 *.aab
 *.apk
 ios/deploy.env
+android/deploy.env
 
 # CodeGraph index
 .codegraph/
