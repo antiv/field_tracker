@@ -1,0 +1,23 @@
+name: tracker_location_permission
+description: Android background and precise location permission requests for the tracker apps, asked one at a time the way Android 11+ requires.
+publish_to: none
+resolution: workspace
+version: 1.0.0
+
+environment:
+  sdk: '>=3.10.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  url_launcher: ^6.3.2
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: rs.antonijevic.tracker_location_permission
+        pluginClass: TrackerLocationPermissionPlugin

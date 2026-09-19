@@ -1,0 +1,40 @@
+name: ciconia_tracker
+description: Popis roda — white stork nest census in the field.
+publish_to: 'none'
+resolution: workspace
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.10.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Everything the app shares with the other trackers — map, recording,
+  # photos, storage, export — lives in tracker_core; the app only adds the
+  # nest record, its form and the surveyor's details.
+  tracker_core:
+    path: ../../packages/tracker_core
+
+  cupertino_icons: ^1.0.9
+  collection: any
+  easy_localization: ^3.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  shared_preferences: ^2.5.5
+  xml: ^7.0.1
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - .env
+    - assets/images/
+    - assets/icons/
+    - assets/translations/

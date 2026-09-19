@@ -1,0 +1,6 @@
+"NSLocationWhenInUseUsageDescription" = "Aplikacija koristi lokaciju u toku rada za prikaz vaše trenutne pozicije na mapi i beleženje lokacija gnezda roda.";
+"NSLocationAlwaysAndWhenInUseUsageDescription" = "Aplikacija koristi lokaciju u pozadini kako bi pratila vašu putanju kretanja tokom popisa gnezda roda, čak i kada je ekran zaključan ili aplikacija nije aktivna.";
+"NSLocationAlwaysUsageDescription" = "Aplikacija koristi lokaciju u pozadini kako bi pratila vašu putanju kretanja tokom popisa gnezda roda, čak i kada je ekran zaključan ili aplikacija nije aktivna.";
+"NSCameraUsageDescription" = "Aplikacija koristi kameru kako biste fotografisali gnezdo rode i priložili fotografiju uz zapis nalaza.";
+"NSPhotoLibraryAddUsageDescription" = "Aplikacija čuva fotografije koje snimite u albumu „Popis roda“ u vašoj galeriji, kako bi terenske fotografije bile dostupne i van aplikacije.";
+"NSPhotoLibraryUsageDescription" = "Aplikaciji je potreban pristup galeriji kako biste postojeće fotografije priložili uz zapis nalaza i kako bi ih čuvala u albumu „Popis roda“.";

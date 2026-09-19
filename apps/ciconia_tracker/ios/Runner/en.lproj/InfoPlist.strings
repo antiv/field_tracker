@@ -1,0 +1,6 @@
+"NSLocationWhenInUseUsageDescription" = "The app uses your location while in use to show your current position on the map and to record stork nest locations.";
+"NSLocationAlwaysAndWhenInUseUsageDescription" = "The app uses your location in the background to track your route during a stork nest census, even when the screen is locked or the app is not active.";
+"NSLocationAlwaysUsageDescription" = "The app uses your location in the background to track your route during a stork nest census, even when the screen is locked or the app is not active.";
+"NSCameraUsageDescription" = "The app uses the camera so you can photograph a stork nest and attach the photo to the observation record.";
+"NSPhotoLibraryAddUsageDescription" = "The app saves the photos you take into a Popis roda album in your photo library, so your field photos stay available outside the app.";
+"NSPhotoLibraryUsageDescription" = "The app needs access to your photo library so you can attach existing photos to an observation record and so it can keep them in the Popis roda album.";
