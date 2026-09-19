@@ -2,6 +2,7 @@
 /// has, without the platform channels it also has.
 library;
 
+import 'package:context_holder/context_holder.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
@@ -24,6 +25,11 @@ Widget localizedTestApp({Widget home = const SizedBox(), Locale? startLocale}) {
         localizationsDelegates: context.localizationDelegates,
         supportedLocales: context.supportedLocales,
         locale: context.locale,
+
+        /// as the real app does: ux_builder's dialogs and snackbars reach for
+        /// the navigator through ContextHolder, and without the key every one
+        /// of them throws on a null context
+        navigatorKey: ContextHolder.key,
         home: home,
       ),
     ),

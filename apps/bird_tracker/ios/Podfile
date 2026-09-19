@@ -36,5 +36,14 @@ end
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
+    # Xcode 27's SDK refuses a deployment target below iOS 15. The Flutter pod (13.0)
+    # and the Google Maps pods (14.0) declare lower minimums than the project, and
+    # podhelper only strips a minimum below 13, so raise the rest to the platform
+    # above. deploy_ios.sh does the same for the generated SPM Package.swift.
+    target.build_configurations.each do |config|
+      if config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'].to_f < 15.0
+        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+      end
+    end
   end
 end

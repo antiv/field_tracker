@@ -119,6 +119,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
     final open = openTransects.first;
     showYesNoDialog(() async {
+      /// both, and in this order: the state's copy is what Stop, Pause and
+      /// the marker paths read, and waiting for the Consumer to sync it on
+      /// the next frame leaves them looking at a null transect while
+      /// _startListener is still awaiting the permission flow
+      transect = open;
       DataService().setTransect(open);
 
       /// the user confirmed they are resuming this transect — start
@@ -276,16 +281,29 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   Future<void> _pauseListener() async {
-    /// Save transect with points and markers
-    // transect?.markers = Placemark.fromMarkers(_markers);
-    transect?.points = _polyLines?.first.points
-        .map((e) => Point()
-          ..latitude = e.latitude
-          ..longitude = e.longitude)
-        .toList();
-    await SembastService().updateTransect(transect!);
+    /// The recording can outlive its transect — "clear map", a Stop already
+    /// taken, or a Start still waiting on the permission dialog — so there
+    /// may be nothing left to save. Stopping the stream is the part that
+    /// always has to happen.
+    final active = transect;
+    if (active == null) {
+      await _stopListener();
+      return;
+    }
+    active.points = _recordedPoints();
+    await SembastService().updateTransect(active);
     _stopListener();
   }
+
+  /// The track as the map has it — every fix was added to the polyline, so
+  /// it is the record of where the user walked.
+  List<Point> _recordedPoints() =>
+      _polyLines?.first.points
+          .map((e) => Point()
+            ..latitude = e.latitude
+            ..longitude = e.longitude)
+          .toList() ??
+      [];
 
   /// Every end of a recording — pause, stop, clear — goes through here, so
   /// this is where the foreground service and its notification go away.
@@ -296,24 +314,39 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   Future<void> _stopTransect() async {
+    /// Nothing to name: a second Stop on the still-open dial, or a Start
+    /// that has not created the row yet — on a simulator the permission and
+    /// location calls take seconds, so that window is wide. Just make sure
+    /// the recording is off.
+    if (transect == null) {
+      await _stopListener();
+      if (mounted) setState(() {});
+      return;
+    }
+
     /// showTextInputDialog to enter transect name
     showTextInputDialog('enter_transect_name'.tr(), 'transect_name'.tr(),
         'Transect ${DateFormat('dd.MM.yyyy').format(DateTime.now())}', (name) {
       _stopListener();
-      transect?.endDate = DateTime.now();
-      transect?.name = name;
-      transect?.points = _polyLines?.first.points
-          .map((e) => Point()
-            ..latitude = e.latitude
-            ..longitude = e.longitude)
-          .toList();
+
+      /// read again rather than captured above: the dialog stayed open for
+      /// as long as the user took to type, and "clear map" or another Stop
+      /// could have finished the transect in the meantime
+      final active = transect;
+      if (active == null) {
+        if (mounted) setState(() {});
+        return;
+      }
+      active.endDate = DateTime.now();
+      active.name = name;
+      active.points = _recordedPoints();
 
       /// close last marker if not closed
-      if (transect?.markers?.isNotEmpty ?? false) {
-        Placemark lastMarker = transect!.markers!.last;
-        lastMarker.endDate ??= DateTime.now();
+      final markers = active.markers;
+      if (markers != null && markers.isNotEmpty) {
+        markers.last.endDate ??= DateTime.now();
       }
-      SembastService().updateTransect(transect!);
+      SembastService().updateTransect(active);
       transect = null;
       DataService().setTransect(null);
       setState(() {});
@@ -412,16 +445,28 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           marker.records?.add(record);
         });
         _goToCurrentLocation();
-        SembastService().updateTransect(transect!);
+        _saveTransect();
       },
     ));
   }
 
+  /// Persist the active transect, if there still is one — a record is saved
+  /// long after its form opened, and the transect may have been finished or
+  /// cleared while the surveyor was filling it in.
+  void _saveTransect() {
+    final active = transect;
+    if (active == null) {
+      log('Record saved with no active transect — nothing to update');
+      return;
+    }
+    SembastService().updateTransect(active);
+  }
+
   void _createNewMarker() {
     /// close last marker
-    if (transect?.markers?.isNotEmpty ?? false) {
-      Placemark lastMarker = transect!.markers!.last;
-      lastMarker.endDate ??= DateTime.now();
+    final previous = transect?.markers;
+    if (previous != null && previous.isNotEmpty) {
+      previous.last.endDate ??= DateTime.now();
     }
 
     final double? markerLatitude = _locationData?.latitude;
@@ -452,7 +497,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           );
         });
         _goToCurrentLocation();
-        SembastService().updateTransect(transect!);
+        _saveTransect();
       },
     ));
   }
@@ -496,14 +541,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       showSnackBar('location_permission_required'.tr());
       return;
     }
-    transect = Transect()
+    final started = Transect()
       ..startDate = DateTime.now()
       ..points = List<Point>.empty(growable: true)
       ..markers = List<Placemark>.empty(growable: true);
-    DataService().setTransect(transect);
+    transect = started;
+    DataService().setTransect(started);
 
     /// insert transect to db
-    SembastService().addTransect(transect!);
+    SembastService().addTransect(started);
     await _startListener();
   }
 
@@ -661,27 +707,33 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               onClose: () {
                 setState(() {});
               },
-              children: [
-                SpeedDialChild(
-                  child: const Icon(Icons.pause),
-                  backgroundColor: Colors.red.shade700,
-                  foregroundColor: Colors.white,
-                  label: 'pause'.tr(),
-                  onTap: () async {
-                    await _pauseListener();
-                    setState(() {});
-                  },
-                ),
-                SpeedDialChild(
-                  child: const Icon(Icons.stop),
-                  backgroundColor: Colors.red.shade700,
-                  foregroundColor: Colors.white,
-                  label: 'stop'.tr(),
-                  onTap: () async {
-                    await _stopTransect();
-                  },
-                ),
-              ],
+              /// Pause and Stop exist only while something is recording: the
+              /// dial doubles as the Start button, and a tap on it flashed
+              /// them for a frame or two before onOpen closed it again —
+              /// long enough to hit Stop before the transect existed.
+              children: locationStream == null
+                  ? const []
+                  : [
+                      SpeedDialChild(
+                        child: const Icon(Icons.pause),
+                        backgroundColor: Colors.red.shade700,
+                        foregroundColor: Colors.white,
+                        label: 'pause'.tr(),
+                        onTap: () async {
+                          await _pauseListener();
+                          setState(() {});
+                        },
+                      ),
+                      SpeedDialChild(
+                        child: const Icon(Icons.stop),
+                        backgroundColor: Colors.red.shade700,
+                        foregroundColor: Colors.white,
+                        label: 'stop'.tr(),
+                        onTap: () async {
+                          await _stopTransect();
+                        },
+                      ),
+                    ],
             ),
             SizedBox(height: DataService().isOpen.value ? 130 : 10),
             FloatingActionButton(

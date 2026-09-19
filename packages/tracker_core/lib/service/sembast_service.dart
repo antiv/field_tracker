@@ -27,33 +27,40 @@ class SembastService with ChangeNotifier {
   /// Safe to call (and await) multiple times — the database is opened once.
   Future<void> init() => _initFuture ??= _openDatabase();
 
+  /// Every read and write goes through here rather than touching [_db]: the
+  /// app starts [init] without awaiting it, so the first query can land
+  /// before the database is open — a LateInitializationError on a late final
+  /// field, from whichever screen happened to ask first.
+  Future<Database> get _ready async {
+    await init();
+    return _db;
+  }
+
   Future<void> _openDatabase() async {
     final dir = await getApplicationDocumentsDirectory();
     final dbPath = '${dir.path}/${TrackerConfig.current.dbName}';
     _db = await databaseFactoryIo.openDatabase(dbPath);
   }
 
-  Database get db => _db;
-
   // ── CRUD ────────────────────────────────────────────────────────────────
 
   Future<void> addTransect(Transect transect) async {
-    final id = await _store.add(_db, transect.toJson());
+    final id = await _store.add(await _ready, transect.toJson());
     transect.id = id;
   }
 
   Future<void> updateTransect(Transect transect) async {
-    await _store.record(transect.id).put(_db, transect.toJson());
+    await _store.record(transect.id).put(await _ready, transect.toJson());
   }
 
   Future<bool> deleteTransect(Transect transect) async {
-    final result = await _store.record(transect.id).delete(_db);
+    final result = await _store.record(transect.id).delete(await _ready);
     return result != null;
   }
 
   Future<List<Transect>> getAllTransects() async {
     final snapshots = await _store.find(
-      _db,
+      await _ready,
       finder: Finder(sortOrders: [SortOrder('startDate', false)]),
     );
     return snapshots.map((s) {
@@ -66,7 +73,7 @@ class SembastService with ChangeNotifier {
   /// Transects that were never finished (endDate == null), newest first.
   Future<List<Transect>> getOpenTransects() async {
     final snapshots = await _store.find(
-      _db,
+      await _ready,
       finder: Finder(
         filter: Filter.isNull('endDate'),
         sortOrders: [SortOrder('startDate', false)],
@@ -80,7 +87,7 @@ class SembastService with ChangeNotifier {
   }
 
   Future<Transect?> getTransectById(int id) async {
-    final snapshot = await _store.record(id).getSnapshot(_db);
+    final snapshot = await _store.record(id).getSnapshot(await _ready);
     if (snapshot == null) return null;
     final json = Map<String, dynamic>.from(snapshot.value);
     json['id'] = snapshot.key;
@@ -118,7 +125,7 @@ class SembastService with ChangeNotifier {
 
     final List<dynamic> jsonList = jsonDecode(jsonString) as List<dynamic>;
 
-    await _db.transaction((txn) async {
+    await (await _ready).transaction((txn) async {
       await _store.delete(txn);
       for (final item in jsonList) {
         final map = Map<String, dynamic>.from(item as Map);
@@ -152,7 +159,7 @@ class SembastService with ChangeNotifier {
 
   /// Import transects from an Isar-read list (used during migration).
   Future<void> importTransects(List<Transect> transects) async {
-    await _db.transaction((txn) async {
+    await (await _ready).transaction((txn) async {
       await _store.delete(txn);
       for (final t in transects) {
         final json = t.toJson();
@@ -167,7 +174,7 @@ class SembastService with ChangeNotifier {
   }
 
   Future<bool> hasData() async {
-    final count = await _store.count(_db);
+    final count = await _store.count(await _ready);
     return count > 0;
   }
 }
