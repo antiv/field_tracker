@@ -110,6 +110,9 @@ fi
 
 $FLUTTER build ios --release --no-codesign
 
+# Herp se potpisuje automatski: Xcode drži upravljani App Store profil za
+# rs.antonijevic.herpTracker (nema ručnog "HerpTracker AppStore" profila kao
+# kod bird-a), a -allowProvisioningUpdates + API ključ ga obnavljaju sami.
 cat > "$EXPORT_PLIST" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -117,11 +120,7 @@ cat > "$EXPORT_PLIST" <<PLIST
 <dict>
   <key>method</key><string>app-store-connect</string>
   <key>teamID</key><string>${APP_STORE_TEAM_ID}</string>
-  <key>signingStyle</key><string>manual</string>
-  <key>provisioningProfiles</key>
-  <dict>
-    <key>rs.antonijevic.herpTracker</key><string>HerpTracker AppStore</string>
-  </dict>
+  <key>signingStyle</key><string>automatic</string>
   <key>destination</key><string>export</string>
   <key>uploadSymbols</key><true/>
   <key>manageAppVersionAndBuildNumber</key><false/>
