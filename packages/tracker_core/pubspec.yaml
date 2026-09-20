@@ -12,6 +12,7 @@ dependencies:
   tracker_location_permission:
     path: ../tracker_location_permission
   google_maps_flutter: ^2.18.0
+  google_maps_flutter_ios_sdk9: ^2.18.12
   location: ^10.0.2
   flutter_svg: ^2.3.0
   flutter_speed_dial: ^7.0.0
