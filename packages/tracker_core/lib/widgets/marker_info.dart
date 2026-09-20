@@ -10,10 +10,7 @@ import '../utils/ux_builder.dart';
 import 'record_form_shell.dart';
 
 class MarkerInfo extends StatefulWidget {
-  const MarkerInfo({
-    super.key,
-    required this.selected,
-  });
+  const MarkerInfo({super.key, required this.selected});
 
   final Placemark? selected;
 
@@ -23,17 +20,19 @@ class MarkerInfo extends StatefulWidget {
 
 class _MarkerInfoState extends State<MarkerInfo> {
   void _addSpecies() {
-    showFullScreenDialog(RecordFormShell(
-      onSaved: (record, close) {
-        setState(() {
-          widget.selected?.endDate = DateTime.now();
-          widget.selected?.records =
-              widget.selected?.records?.toList(growable: true) ?? [];
-          widget.selected?.records?.add(record);
-        });
-        SembastService().updateTransect(DataService().transect!);
-      },
-    ));
+    showFullScreenDialog(
+      RecordFormShell(
+        onSaved: (record, close) {
+          setState(() {
+            widget.selected?.endDate = DateTime.now();
+            widget.selected?.records =
+                widget.selected?.records?.toList(growable: true) ?? [];
+            widget.selected?.records?.add(record);
+          });
+          SembastService().updateTransect(DataService().transect!);
+        },
+      ),
+    );
   }
 
   @override
@@ -53,7 +52,9 @@ class _MarkerInfoState extends State<MarkerInfo> {
           const SizedBox(height: 8),
           Text(
             '${'point'.tr()} ${(widget.selected?.id ?? 0) + 1}',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 4),
           Row(
@@ -61,11 +62,16 @@ class _MarkerInfoState extends State<MarkerInfo> {
             children: [
               Text(
                 widget.selected?.durationWithDay ?? '',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
               ),
               Text(
                 '$speciesLength ${'species_title'.tr()}',
-                style: TextStyle(color: Colors.green.shade700, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: Colors.green.shade700,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),
@@ -77,24 +83,31 @@ class _MarkerInfoState extends State<MarkerInfo> {
                     itemBuilder: (context, index) {
                       int revIdx = speciesLength - index - 1;
                       return Card(
-                        margin: const EdgeInsets.symmetric(vertical: 2, horizontal: 4),
+                        margin: const EdgeInsets.symmetric(
+                          vertical: 2,
+                          horizontal: 4,
+                        ),
                         child: ListTile(
-                            dense: true,
-                            visualDensity: VisualDensity.compact,
-                            title: Text(
-                                widget.selected!.records![revIdx].species),
-                            subtitle: Text(
-                                widget.selected!.records![revIdx].subtitle),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.delete),
-                              onPressed: () {
-                                showDeleteWithPhotosDialog(
-                                    widget.selected?.records?[revIdx].photos ??
-                                        const [], (_) {
+                          dense: true,
+                          visualDensity: VisualDensity.compact,
+                          title: Text(
+                            widget.selected!.records![revIdx].species,
+                          ),
+                          subtitle: Text(
+                            widget.selected!.records![revIdx].subtitle,
+                          ),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete),
+                            onPressed: () {
+                              showDeleteWithPhotosDialog(
+                                widget.selected?.records?[revIdx].photos ??
+                                    const [],
+                                (_) {
                                   setState(() {
-                                    widget.selected?.records = widget
-                                            .selected?.records
-                                            ?.toList(growable: true) ??
+                                    widget.selected?.records =
+                                        widget.selected?.records?.toList(
+                                          growable: true,
+                                        ) ??
                                         [];
                                     widget.selected?.records?.removeAt(revIdx);
                                   });
@@ -102,33 +115,37 @@ class _MarkerInfoState extends State<MarkerInfo> {
                                   /// the removal has to reach the database —
                                   /// setState alone brought the record back on
                                   /// the next load
-                                  DataService()
-                                      .transect
-                                      ?.updateMarker(widget.selected!);
-                                  SembastService()
-                                      .updateTransect(DataService().transect!);
-                                });
-                              },
-                            ),
-                            onTap: () {
-                              showFullScreenDialog(
-                                RecordFormShell(
-                                  existing: widget.selected?.records?[revIdx],
-                                  onSaved: (record, _) {
-                                    setState(() {
-                                      widget.selected?.records?[revIdx] =
-                                          record;
-                                    });
-                                    DataService()
-                                        .transect
-                                        ?.updateMarker(widget.selected!);
-                                    SembastService().updateTransect(
-                                        DataService().transect!);
-                                  },
-                                ),
-                                title: 'edit_species_title'.tr(),
+                                  DataService().transect?.updateMarker(
+                                    widget.selected!,
+                                  );
+                                  SembastService().updateTransect(
+                                    DataService().transect!,
+                                  );
+                                },
+                                title: 'delete_record_confirm'.tr(),
                               );
-                            }),
+                            },
+                          ),
+                          onTap: () {
+                            showFullScreenDialog(
+                              RecordFormShell(
+                                existing: widget.selected?.records?[revIdx],
+                                onSaved: (record, _) {
+                                  setState(() {
+                                    widget.selected?.records?[revIdx] = record;
+                                  });
+                                  DataService().transect?.updateMarker(
+                                    widget.selected!,
+                                  );
+                                  SembastService().updateTransect(
+                                    DataService().transect!,
+                                  );
+                                },
+                              ),
+                              title: 'edit_species_title'.tr(),
+                            );
+                          },
+                        ),
                       );
                     },
                   )
@@ -139,20 +156,21 @@ class _MarkerInfoState extends State<MarkerInfo> {
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               OutlinedButton(
-                onPressed: () => Navigator.of(ContextHolder.currentContext).pop(),
+                onPressed: () =>
+                    Navigator.of(ContextHolder.currentContext).pop(),
                 child: Text('close'.tr()),
               ),
               if (canAdd) const SizedBox(width: 12),
               if (canAdd)
                 ElevatedButton.icon(
-                onPressed: () => _addSpecies(),
-                icon: const Icon(Icons.add),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
+                  onPressed: () => _addSpecies(),
+                  icon: const Icon(Icons.add),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                  ),
+                  label: Text('add_species_btn'.tr()),
                 ),
-                label: Text('add_species_btn'.tr()),
-              ),
             ],
           ),
           const SizedBox(height: 12),

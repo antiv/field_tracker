@@ -106,5 +106,11 @@
     "photos": "Photos"
   },
   "select_atlas_code": "Select atlas code",
-  "select_code": "Select code: {}"
+  "select_code": "Select code: {}",
+  "no_points_save_prompt": "No points have been recorded. Do you want to save the transect?",
+  "delete_transect_confirm": "Are you sure you want to delete this transect?",
+  "delete_point_confirm": "Are you sure you want to delete this point?",
+  "delete_record_confirm": "Are you sure you want to delete this record?",
+  "transect_deleted": "Transect deleted",
+  "delete": "Delete"
 }

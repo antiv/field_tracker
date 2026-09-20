@@ -10,9 +10,7 @@ import '../service/data_service.dart';
 import '../utils/ux_builder.dart';
 
 class TransectsHistory extends StatefulWidget {
-  const TransectsHistory({
-    super.key,
-  });
+  const TransectsHistory({super.key});
 
   @override
   State<TransectsHistory> createState() => _TransectsHistoryState();
@@ -42,7 +40,9 @@ class _TransectsHistoryState extends State<TransectsHistory> {
         const SizedBox(height: 8),
         Text(
           'history_title'.tr(),
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 4),
         Expanded(
@@ -52,86 +52,130 @@ class _TransectsHistoryState extends State<TransectsHistory> {
                   itemCount: transects.length,
                   itemBuilder: (BuildContext context, int index) {
                     return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 2, horizontal: 8),
+                      margin: const EdgeInsets.symmetric(
+                        vertical: 2,
+                        horizontal: 8,
+                      ),
                       child: ListTile(
-                          dense: true,
-                          visualDensity: VisualDensity.compact,
-                          onTap: () {
-                            DataService().setTransect(transects[index]);
-                            Navigator.pop(ContextHolder.currentContext);
-                          },
-                          // leading: const Icon(Icons.map_outlined),
-                          title: Text(
-                            transects[index].name ??
-                                'Transect ${transects[index].id}: '
-                                    '${DateFormat('dd.MM.yyyy HH:mm').format(transects[index].startDate)} - '
-                                    '${transects[index].endDate != null ? DateFormat('HH:mm').format(transects[index].endDate!) : 'in_progress'.tr()}',
-                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                        dense: true,
+                        visualDensity: VisualDensity.compact,
+                        onTap: () {
+                          DataService().setTransect(transects[index]);
+                          Navigator.pop(ContextHolder.currentContext);
+                        },
+                        // leading: const Icon(Icons.map_outlined),
+                        title: Text(
+                          transects[index].name ??
+                              'Transect ${transects[index].id}: '
+                                  '${DateFormat('dd.MM.yyyy HH:mm').format(transects[index].startDate)} - '
+                                  '${transects[index].endDate != null ? DateFormat('HH:mm').format(transects[index].endDate!) : 'in_progress'.tr()}',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
                           ),
-                          // onTap: () {
-                          //   Navigator.of(context).pop();
-                          // },
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '${'markers'.tr()}: ${transects[index].markers?.length ?? 0} '
-                                '${'distance'.tr()}: ${calculateDistance(transects[index].points?.map((e) => LatLng(e.latitude, e.longitude)).toList() ?? []).toStringAsFixed(2)}km '
-                                '${'time'.tr()}: ${getTimeDifference(transects[index].startDate, transects[index].endDate ?? DateTime.now())}',
-                                style: const TextStyle(fontSize: 11),
-                              ),
-                                Row(children: [
-                                  Builder(
-                                    builder: (buttonContext) => ElevatedButton.icon(
-                                      onPressed: () {
-                                        final box = buttonContext.findRenderObject() as RenderBox?;
-                                        final rect = box != null ? (box.localToGlobal(Offset.zero) & box.size) : null;
-                                        transects[index].shareCSV(rect);
-                                      },
-                                      icon: const Icon(Icons.share, size: 14),
-                                      style: ElevatedButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        minimumSize: Size.zero,
-                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        // onTap: () {
+                        //   Navigator.of(context).pop();
+                        // },
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${'markers'.tr()}: ${transects[index].markers?.length ?? 0} '
+                              '${'distance'.tr()}: ${calculateDistance(transects[index].points?.map((e) => LatLng(e.latitude, e.longitude)).toList() ?? []).toStringAsFixed(2)}km '
+                              '${'time'.tr()}: ${getTimeDifference(transects[index].startDate, transects[index].endDate ?? DateTime.now())}',
+                              style: const TextStyle(fontSize: 11),
+                            ),
+                            Row(
+                              children: [
+                                Builder(
+                                  builder: (buttonContext) =>
+                                      ElevatedButton.icon(
+                                        onPressed: () {
+                                          final box =
+                                              buttonContext.findRenderObject()
+                                                  as RenderBox?;
+                                          final rect = box != null
+                                              ? (box.localToGlobal(
+                                                      Offset.zero,
+                                                    ) &
+                                                    box.size)
+                                              : null;
+                                          transects[index].shareCSV(rect);
+                                        },
+                                        icon: const Icon(Icons.share, size: 14),
+                                        style: ElevatedButton.styleFrom(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
+                                          minimumSize: Size.zero,
+                                          tapTargetSize:
+                                              MaterialTapTargetSize.shrinkWrap,
+                                        ),
+                                        label: Text(
+                                          'csv'.tr(),
+                                          style: const TextStyle(fontSize: 11),
+                                        ),
                                       ),
-                                      label: Text('csv'.tr(), style: const TextStyle(fontSize: 11)),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Builder(
-                                    builder: (buttonContext) => ElevatedButton.icon(
-                                      onPressed: () {
-                                        final box = buttonContext.findRenderObject() as RenderBox?;
-                                        final rect = box != null ? (box.localToGlobal(Offset.zero) & box.size) : null;
-                                        transects[index].shareKML(rect);
-                                      },
-                                      icon: const Icon(Icons.share, size: 14),
-                                      style: ElevatedButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        minimumSize: Size.zero,
-                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                ),
+                                const SizedBox(width: 8),
+                                Builder(
+                                  builder: (buttonContext) =>
+                                      ElevatedButton.icon(
+                                        onPressed: () {
+                                          final box =
+                                              buttonContext.findRenderObject()
+                                                  as RenderBox?;
+                                          final rect = box != null
+                                              ? (box.localToGlobal(
+                                                      Offset.zero,
+                                                    ) &
+                                                    box.size)
+                                              : null;
+                                          transects[index].shareKML(rect);
+                                        },
+                                        icon: const Icon(Icons.share, size: 14),
+                                        style: ElevatedButton.styleFrom(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
+                                          minimumSize: Size.zero,
+                                          tapTargetSize:
+                                              MaterialTapTargetSize.shrinkWrap,
+                                        ),
+                                        label: Text(
+                                          transects[index].hasPhotos
+                                              ? 'kmz'.tr()
+                                              : 'kml'.tr(),
+                                          style: const TextStyle(fontSize: 11),
+                                        ),
                                       ),
-                                      label: Text(
-                                          transects[index].hasPhotos ? 'kmz'.tr() : 'kml'.tr(),
-                                          style: const TextStyle(fontSize: 11)),
-                                    ),
-                                  ),
-                                ]),
-                            ],
-                          ),
-                          isThreeLine: true,
-                          trailing: IconButton(
-                            onPressed: () {
-                              showDeleteWithPhotosDialog(
-                                  transects[index].photoNames, (_) {
-                                SembastService().deleteTransect(transects[index]);
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        isThreeLine: true,
+                        trailing: IconButton(
+                          onPressed: () {
+                            showDeleteWithPhotosDialog(
+                              transects[index].photoNames,
+                              (_) {
+                                SembastService().deleteTransect(
+                                  transects[index],
+                                );
                                 setState(() {
                                   transects.removeAt(index);
                                 });
-                              });
-                            },
-                            icon: const Icon(Icons.delete),
-                          )),
+                              },
+                              title: 'delete_transect_confirm'.tr(),
+                            );
+                          },
+                          icon: const Icon(Icons.delete),
+                        ),
+                      ),
                     );
                   },
                 )

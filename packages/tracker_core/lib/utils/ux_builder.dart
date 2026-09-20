@@ -61,10 +61,7 @@ void showDialogBox(Widget widget) {
 }
 
 void showAlertDialog(Widget content, List<Widget> actions) {
-  showDialogBox(AlertDialog(
-    content: content,
-    actions: actions,
-  ));
+  showDialogBox(AlertDialog(content: content, actions: actions));
 }
 
 void showYesNoDialog(
@@ -77,7 +74,10 @@ void showYesNoDialog(
   showAlertDialog(
     Padding(
       padding: const EdgeInsets.only(top: 8.0),
-      child: Text(title ?? 'are_you_sure'.tr(), style: const TextStyle(fontSize: 16)),
+      child: Text(
+        title ?? 'are_you_sure'.tr(),
+        style: const TextStyle(fontSize: 16),
+      ),
     ),
     [
       OutlinedButton(
@@ -103,86 +103,100 @@ void showYesNoDialog(
 /// database must never take the pictures with it unless the user says so.
 /// With no photos in play this is the plain yes/no dialog.
 void showDeleteWithPhotosDialog(
-    List<String> photos, void Function(bool deletePhotos) onConfirm) {
+  List<String> photos,
+  void Function(bool deletePhotos) onConfirm, {
+  String? title,
+}) {
   if (photos.isEmpty) {
-    showYesNoDialog(() => onConfirm(false), () {});
+    showYesNoDialog(() => onConfirm(false), () {}, title: title);
     return;
   }
 
   bool deletePhotos = false;
-  showDialogBox(StatefulBuilder(
-    builder: (context, setState) => AlertDialog(
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('are_you_sure'.tr(), style: const TextStyle(fontSize: 16)),
-          const SizedBox(height: 8),
-          CheckboxListTile(
-            value: deletePhotos,
-            onChanged: (value) => setState(() => deletePhotos = value ?? false),
-            title: Text('delete_photos_too'.tr(args: ['${photos.length}'])),
-            subtitle: Text('delete_photos_hint'.tr(namedArgs: appArgs),
-                style: const TextStyle(fontSize: 12)),
-            contentPadding: EdgeInsets.zero,
-            controlAffinity: ListTileControlAffinity.leading,
-            visualDensity: VisualDensity.compact,
+  showDialogBox(
+    StatefulBuilder(
+      builder: (context, setState) => AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title ?? 'are_you_sure'.tr(),
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 8),
+            CheckboxListTile(
+              value: deletePhotos,
+              onChanged: (value) =>
+                  setState(() => deletePhotos = value ?? false),
+              title: Text('delete_photos_too'.tr(args: ['${photos.length}'])),
+              subtitle: Text(
+                'delete_photos_hint'.tr(namedArgs: appArgs),
+                style: const TextStyle(fontSize: 12),
+              ),
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              visualDensity: VisualDensity.compact,
+            ),
+          ],
+        ),
+        actions: [
+          OutlinedButton(
+            onPressed: () => Navigator.of(ContextHolder.currentContext).pop(),
+            child: Text('no'.tr()),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(ContextHolder.currentContext).pop();
+              if (deletePhotos) MediaService().delete(photos);
+              onConfirm(deletePhotos);
+            },
+            child: Text('yes'.tr()),
           ),
         ],
       ),
+    ),
+  );
+}
+
+void showTextInputDialog(
+  String title,
+  String hint,
+  String? defaultValue,
+  Function(String) onConfirm,
+) {
+  String value = defaultValue ?? '';
+  showDialogBox(
+    AlertDialog(
+      title: Text(title),
+      content: Padding(
+        padding: const EdgeInsets.only(top: 8.0),
+        child: TextFormField(
+          decoration: InputDecoration(hintText: hint, labelText: hint),
+          autofocus: true,
+          initialValue: defaultValue,
+          onChanged: (String newValue) {
+            value = newValue;
+          },
+        ),
+      ),
       actions: [
         OutlinedButton(
-          onPressed: () => Navigator.of(ContextHolder.currentContext).pop(),
-          child: Text('no'.tr()),
+          onPressed: () {
+            Navigator.of(ContextHolder.currentContext).pop();
+          },
+          child: Text('cancel'.tr()),
         ),
         ElevatedButton(
           onPressed: () {
             Navigator.of(ContextHolder.currentContext).pop();
-            if (deletePhotos) MediaService().delete(photos);
-            onConfirm(deletePhotos);
+            onConfirm(value);
           },
-          child: Text('yes'.tr()),
+          child: Text('confirm'.tr()),
         ),
       ],
     ),
-  ));
-}
-
-void showTextInputDialog(String title, String hint, String? defaultValue,
-    Function(String) onConfirm) {
-  String value = defaultValue ?? '';
-  showDialogBox(AlertDialog(
-    title: Text(title),
-    content: Padding(
-      padding: const EdgeInsets.only(top: 8.0),
-      child: TextFormField(
-        decoration: InputDecoration(
-          hintText: hint,
-          labelText: hint,
-        ),
-        autofocus: true,
-        initialValue: defaultValue,
-        onChanged: (String newValue) {
-          value = newValue;
-        },
-      ),
-    ),
-    actions: [
-      OutlinedButton(
-        onPressed: () {
-          Navigator.of(ContextHolder.currentContext).pop();
-        },
-        child: Text('cancel'.tr()),
-      ),
-      ElevatedButton(
-        onPressed: () {
-          Navigator.of(ContextHolder.currentContext).pop();
-          onConfirm(value);
-        },
-        child: Text('confirm'.tr()),
-      ),
-    ],
-  ));
+  );
 }
 
 void showSnackBar(String message, {int duration = 1}) {
@@ -277,47 +291,50 @@ Future<bool> _isZip(File file) async {
 }
 
 Future<bool> showPermissionInfoDialog() => _showRationaleDialog(
-      'location_permission_title'.tr(),
-      Platform.isIOS
-          ? 'location_permission_content_ios'.tr(namedArgs: appArgs)
-          : 'location_permission_content'.tr(namedArgs: appArgs),
-    );
+  'location_permission_title'.tr(),
+  Platform.isIOS
+      ? 'location_permission_content_ios'.tr(namedArgs: appArgs)
+      : 'location_permission_content'.tr(namedArgs: appArgs),
+);
 
 /// Second step of the Android permission flow: "Allow all the time" has to be
 /// requested on its own, after the foreground grant, or Android 11+ shows
 /// nothing at all. Google also expects a rationale immediately before it.
 Future<bool> showBackgroundPermissionInfoDialog() => _showRationaleDialog(
-      'location_background_title'.tr(),
-      'location_background_content'.tr(namedArgs: appArgs),
-    );
+  'location_background_title'.tr(),
+  'location_background_content'.tr(namedArgs: appArgs),
+);
 
 /// Shown when the background request came back denied: on Android 11+ the only
 /// place left to grant it is the app's own settings page.
 Future<bool> showBackgroundPermissionDeniedDialog() => _showRationaleDialog(
-      'location_background_title'.tr(),
-      'location_background_denied'.tr(),
-      confirmText: 'open_settings'.tr(),
-    );
+  'location_background_title'.tr(),
+  'location_background_denied'.tr(),
+  confirmText: 'open_settings'.tr(),
+);
 
 /// Foreground location was refused for good ("Don't ask again", or revoked in
 /// settings): the system will not show a prompt any more, so the only way
 /// forward is the app's own settings page.
 Future<bool> showLocationDeniedForeverDialog() => _showRationaleDialog(
-      'location_permission_title'.tr(),
-      'location_permission_denied_forever'.tr(namedArgs: appArgs),
-      confirmText: 'open_settings'.tr(),
-    );
+  'location_permission_title'.tr(),
+  'location_permission_denied_forever'.tr(namedArgs: appArgs),
+  confirmText: 'open_settings'.tr(),
+);
 
 /// Android 12+ "Approximate location": the grant is real but useless for a
 /// survey route, and a re-request is what shows the upgrade-to-precise prompt.
 Future<bool> showPreciseLocationDialog() => _showRationaleDialog(
-      'location_permission_title'.tr(),
-      'precise_location_required'.tr(namedArgs: appArgs),
-      confirmText: 'open_settings'.tr(),
-    );
+  'location_permission_title'.tr(),
+  'precise_location_required'.tr(namedArgs: appArgs),
+  confirmText: 'open_settings'.tr(),
+);
 
-Future<bool> _showRationaleDialog(String title, String content,
-    {String? confirmText}) async {
+Future<bool> _showRationaleDialog(
+  String title,
+  String content, {
+  String? confirmText,
+}) async {
   bool result = false;
   await showDialog(
     context: ContextHolder.currentContext,

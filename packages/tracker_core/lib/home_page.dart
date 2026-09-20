@@ -53,7 +53,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   final Completer<GoogleMapController> _completer = Completer();
   GoogleMapController? controller;
   Set<Marker> _markers = {};
-// on below line we have specified camera position
+  // on below line we have specified camera position
   static const CameraPosition _kHome = CameraPosition(
     target: LatLng(44.8, 20.36),
     zoom: 14.4746,
@@ -66,13 +66,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     SembastService().init();
     _polyLines = {
       Polyline(
-          polylineId: const PolylineId('1'),
-          points: transect?.points
-                  ?.map((e) => LatLng(e.latitude, e.longitude))
-                  .toList() ??
-              [],
-          color: Colors.red,
-          width: 5)
+        polylineId: const PolylineId('1'),
+        points:
+            transect?.points
+                ?.map((e) => LatLng(e.latitude, e.longitude))
+                .toList() ??
+            [],
+        color: Colors.red,
+        width: 5,
+      ),
     };
 
     DataService().initPreferences();
@@ -118,38 +120,43 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
 
     final open = openTransects.first;
-    showYesNoDialog(() async {
-      /// both, and in this order: the state's copy is what Stop, Pause and
-      /// the marker paths read, and waiting for the Consumer to sync it on
-      /// the next frame leaves them looking at a null transect while
-      /// _startListener is still awaiting the permission flow
-      transect = open;
-      DataService().setTransect(open);
+    showYesNoDialog(
+      () async {
+        /// both, and in this order: the state's copy is what Stop, Pause and
+        /// the marker paths read, and waiting for the Consumer to sync it on
+        /// the next frame leaves them looking at a null transect while
+        /// _startListener is still awaiting the permission flow
+        transect = open;
+        DataService().setTransect(open);
 
-      /// the user confirmed they are resuming this transect — start
-      /// recording right away so the track continues from its last point;
-      /// setTransect moved the camera to the transect start (goToFirst),
-      /// so bring it back to where the user actually is. Without the
-      /// permission the transect simply stays open for the next attempt.
-      if (await _startListener()) {
-        await _goToCurrentLocation();
-        showSnackBar('transect_resumed'.tr());
-      }
-      if (mounted) setState(() {});
-    }, () {
-      _closeTransect(open);
-    },
-        title: 'unfinished_transect'
-            .tr(args: [DateFormat('dd.MM.yyyy HH:mm').format(open.startDate)]),
-        yesText: 'continue'.tr(),
-        noText: 'finish'.tr());
+        /// the user confirmed they are resuming this transect — start
+        /// recording right away so the track continues from its last point;
+        /// setTransect moved the camera to the transect start (goToFirst),
+        /// so bring it back to where the user actually is. Without the
+        /// permission the transect simply stays open for the next attempt.
+        if (await _startListener()) {
+          await _goToCurrentLocation();
+          showSnackBar('transect_resumed'.tr());
+        }
+        if (mounted) setState(() {});
+      },
+      () {
+        _closeTransect(open);
+      },
+      title: 'unfinished_transect'.tr(
+        args: [DateFormat('dd.MM.yyyy HH:mm').format(open.startDate)],
+      ),
+      yesText: 'continue'.tr(),
+      noText: 'finish'.tr(),
+    );
   }
 
   /// Route points carry no timestamps, so the last marker time (or the
   /// start) is the best available estimate for when recording ended.
   void _closeTransect(Transect transect) {
     final markers = transect.markers;
-    transect.endDate = (markers != null && markers.isNotEmpty
+    transect.endDate =
+        (markers != null && markers.isNotEmpty
             ? markers.last.endDate ?? markers.last.startDate
             : null) ??
         transect.startDate;
@@ -186,7 +193,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   void onLocationChange(LocationData currentLocation) {
-    log('Location updated in listener: lat=${currentLocation.latitude}, lng=${currentLocation.longitude}');
+    log(
+      'Location updated in listener: lat=${currentLocation.latitude}, lng=${currentLocation.longitude}',
+    );
     final target = LatLng(currentLocation.latitude, currentLocation.longitude);
     if (!isFiniteLatLng(target)) return;
 
@@ -194,9 +203,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     _locationData = currentLocation;
     _polyLines?.first.points.add(target);
     transect?.points = transect?.points?.toList(growable: true) ?? [];
-    transect?.points?.add(Point()
-      ..latitude = target.latitude
-      ..longitude = target.longitude);
+    transect?.points?.add(
+      Point()
+        ..latitude = target.latitude
+        ..longitude = target.longitude,
+    );
 
     if (!_appVisible || !mounted) return;
     setState(() {});
@@ -214,8 +225,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     try {
       final zoom = await map.getZoomLevel();
       if (!zoom.isFinite || !_appVisible || !mounted) return;
-      await map.animateCamera(CameraUpdate.newCameraPosition(
-          CameraPosition(target: target, zoom: zoom)));
+      await map.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(target: target, zoom: zoom),
+        ),
+      );
 
       /// recorded only once the move went out: a follow that bailed above
       /// must not make the resume catch-up think the camera is already there
@@ -250,7 +264,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
     try {
       await location.changeSettings(
-          accuracy: LocationAccuracy.high, interval: 1000, distanceFilter: 0);
+        accuracy: LocationAccuracy.high,
+        interval: 1000,
+        distanceFilter: 0,
+      );
     } catch (e) {
       log('Could not apply location settings: $e');
     }
@@ -267,16 +284,22 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     );
 
     log('Fetching initial location for startListener...');
-    location.getLocation().timeout(const Duration(seconds: 4)).then((initialLocation) {
-      log('initialLocation fetched for startListener: lat=${initialLocation.latitude}, lng=${initialLocation.longitude}');
-      if (mounted) {
-        setState(() {
-          _locationData = initialLocation;
+    location
+        .getLocation()
+        .timeout(const Duration(seconds: 4))
+        .then((initialLocation) {
+          log(
+            'initialLocation fetched for startListener: lat=${initialLocation.latitude}, lng=${initialLocation.longitude}',
+          );
+          if (mounted) {
+            setState(() {
+              _locationData = initialLocation;
+            });
+          }
+        })
+        .catchError((e) {
+          log('Error getting initial location on startListener: $e');
         });
-      }
-    }).catchError((e) {
-      log('Error getting initial location on startListener: $e');
-    });
     return true;
   }
 
@@ -299,9 +322,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   /// it is the record of where the user walked.
   List<Point> _recordedPoints() =>
       _polyLines?.first.points
-          .map((e) => Point()
-            ..latitude = e.latitude
-            ..longitude = e.longitude)
+          .map(
+            (e) => Point()
+              ..latitude = e.latitude
+              ..longitude = e.longitude,
+          )
           .toList() ??
       [];
 
@@ -324,33 +349,78 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       return;
     }
 
+    final hasPoints =
+        transect?.markers != null && transect!.markers!.isNotEmpty;
+    if (!hasPoints) {
+      showYesNoDialog(
+        () {
+          _promptSaveTransect();
+        },
+        () {
+          showYesNoDialog(
+            () async {
+              await _deleteActiveTransect();
+            },
+            () {},
+            title: 'delete_transect_confirm'.tr(),
+            yesText: 'delete'.tr(),
+            noText: 'cancel'.tr(),
+          );
+        },
+        title: 'no_points_save_prompt'.tr(),
+        yesText: 'save'.tr(),
+        noText: 'no'.tr(),
+      );
+      return;
+    }
+
+    _promptSaveTransect();
+  }
+
+  void _promptSaveTransect() {
     /// showTextInputDialog to enter transect name
-    showTextInputDialog('enter_transect_name'.tr(), 'transect_name'.tr(),
-        'Transect ${DateFormat('dd.MM.yyyy').format(DateTime.now())}', (name) {
-      _stopListener();
+    showTextInputDialog(
+      'enter_transect_name'.tr(),
+      'transect_name'.tr(),
+      'Transect ${DateFormat('dd.MM.yyyy').format(DateTime.now())}',
+      (name) async {
+        await _stopListener();
 
-      /// read again rather than captured above: the dialog stayed open for
-      /// as long as the user took to type, and "clear map" or another Stop
-      /// could have finished the transect in the meantime
-      final active = transect;
-      if (active == null) {
+        /// read again rather than captured above: the dialog stayed open for
+        /// as long as the user took to type, and "clear map" or another Stop
+        /// could have finished the transect in the meantime
+        final active = transect;
+        if (active == null) {
+          if (mounted) setState(() {});
+          return;
+        }
+        active.endDate = DateTime.now();
+        active.name = name;
+        active.points = _recordedPoints();
+
+        /// close last marker if not closed
+        final markers = active.markers;
+        if (markers != null && markers.isNotEmpty) {
+          markers.last.endDate ??= DateTime.now();
+        }
+        await SembastService().updateTransect(active);
+        transect = null;
+        DataService().setTransect(null);
         if (mounted) setState(() {});
-        return;
-      }
-      active.endDate = DateTime.now();
-      active.name = name;
-      active.points = _recordedPoints();
+      },
+    );
+  }
 
-      /// close last marker if not closed
-      final markers = active.markers;
-      if (markers != null && markers.isNotEmpty) {
-        markers.last.endDate ??= DateTime.now();
-      }
-      SembastService().updateTransect(active);
-      transect = null;
-      DataService().setTransect(null);
-      setState(() {});
-    });
+  Future<void> _deleteActiveTransect() async {
+    await _stopListener();
+    final active = transect;
+    if (active != null) {
+      await SembastService().deleteTransect(active);
+    }
+    transect = null;
+    DataService().setTransect(null);
+    showSnackBar('transect_deleted'.tr());
+    if (mounted) setState(() {});
   }
 
   void _addMarker() async {
@@ -361,15 +431,20 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       showSnackBar('getting_current_location'.tr());
       try {
         log('Attempting to fetch location via getLocation() with timeout...');
-        _locationData = await location.getLocation().timeout(const Duration(seconds: 4));
-        log('getLocation() returned: lat=${_locationData?.latitude}, lng=${_locationData?.longitude}');
+        _locationData = await location.getLocation().timeout(
+          const Duration(seconds: 4),
+        );
+        log(
+          'getLocation() returned: lat=${_locationData?.latitude}, lng=${_locationData?.longitude}',
+        );
       } catch (e) {
         log('Error getting location: ${e.toString()}');
       }
     }
 
     final current = _locationData;
-    if (current == null || !isFiniteLatLng(LatLng(current.latitude, current.longitude))) {
+    if (current == null ||
+        !isFiniteLatLng(LatLng(current.latitude, current.longitude))) {
       showSnackBar('location_not_available'.tr());
       return;
     }
@@ -380,10 +455,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
     for (var marker in transect?.markers ?? <Placemark>[]) {
       double distKm = getStraightLineDistance(
-          marker.latitude ?? 0,
-          marker.longitude ?? 0,
-          current.latitude,
-          current.longitude);
+        marker.latitude ?? 0,
+        marker.longitude ?? 0,
+        current.latitude,
+        current.longitude,
+      );
       double distM = distKm * 1000;
       if (distM < radius && distM < minDistanceMeters) {
         minDistanceMeters = distM;
@@ -399,9 +475,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('point_nearby_title'.tr(),
-                  style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold)),
+              Text(
+                'point_nearby_title'.tr(),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const SizedBox(height: 10),
               Text('point_nearby_content'.tr(args: [radius.toString()])),
             ],
@@ -430,7 +510,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 ),
               ),
             ],
-          )
+          ),
         ],
       );
     } else {
@@ -439,15 +519,17 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   void _addToExistingMarker(Placemark marker) {
-    showFullScreenDialog(RecordFormShell(
-      onSaved: (record, close) {
-        setState(() {
-          marker.records?.add(record);
-        });
-        _goToCurrentLocation();
-        _saveTransect();
-      },
-    ));
+    showFullScreenDialog(
+      RecordFormShell(
+        onSaved: (record, close) {
+          setState(() {
+            marker.records?.add(record);
+          });
+          _goToCurrentLocation();
+          _saveTransect();
+        },
+      ),
+    );
   }
 
   /// Persist the active transect, if there still is one — a record is saved
@@ -479,27 +561,29 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       return;
     }
 
-    showFullScreenDialog(RecordFormShell(
-      onSaved: (record, close) {
-        setState(() {
-          transect?.markers = transect?.markers?.toList(growable: true) ?? [];
-          transect?.markers?.add(
-            Placemark(
-              latitude: markerLatitude,
-              longitude: markerLongitude,
-              altitude: markerAltitude,
-              accuracy: markerAccuracy,
-              startDate: DateTime.now(),
-              endDate: null,
-              id: transect?.markers?.length ?? 0,
-              records: [record],
-            ),
-          );
-        });
-        _goToCurrentLocation();
-        _saveTransect();
-      },
-    ));
+    showFullScreenDialog(
+      RecordFormShell(
+        onSaved: (record, close) {
+          setState(() {
+            transect?.markers = transect?.markers?.toList(growable: true) ?? [];
+            transect?.markers?.add(
+              Placemark(
+                latitude: markerLatitude,
+                longitude: markerLongitude,
+                altitude: markerAltitude,
+                accuracy: markerAccuracy,
+                startDate: DateTime.now(),
+                endDate: null,
+                id: transect?.markers?.length ?? 0,
+                records: [record],
+              ),
+            );
+          });
+          _goToCurrentLocation();
+          _saveTransect();
+        },
+      ),
+    );
   }
 
   /// A quick second tap on the Start button lands while the first one is
@@ -559,8 +643,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       key: _key,
       appBar: AppBar(
         backgroundColor: const Color(0xFF0F9D58),
-        title:
-            Text(TrackerConfig.current.appTitle, style: const TextStyle(color: Colors.white)),
+        title: Text(
+          TrackerConfig.current.appTitle,
+          style: const TextStyle(color: Colors.white),
+        ),
         actions: [
           DropdownButtonHideUnderline(
             child: DropdownButton<Locale>(
@@ -586,7 +672,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 ),
               ],
             ),
-          )
+          ),
         ],
         leading: InkWell(
           onTap: () {
@@ -598,88 +684,96 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               TrackerConfig.current.logoAsset,
               fit: BoxFit.scaleDown,
               semanticsLabel: '${TrackerConfig.current.appTitle} Logo',
-              colorFilter:
-                  const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+              colorFilter: const ColorFilter.mode(
+                Colors.white,
+                BlendMode.srcIn,
+              ),
             ),
           ),
         ),
       ),
-      drawer: const Drawer(
-        child: AppMenu(),
-      ),
+      drawer: const Drawer(child: AppMenu()),
       body: SafeArea(
         // on below line creating google maps
-        child: Consumer<DataService>(builder: (context, dataService, _) {
-          transect = dataService.transect;
+        child: Consumer<DataService>(
+          builder: (context, dataService, _) {
+            transect = dataService.transect;
 
-          /// transect was cleared externally (e.g. "clear map") while
-          /// recording — stop the location listener too
-          if (transect == null && locationStream != null) {
-            WidgetsBinding.instance.addPostFrameCallback((_) async {
-              await _stopListener();
-              if (mounted) setState(() {});
-            });
-          }
-          _polyLines?.first.points.clear();
-          _polyLines?.first.points.addAll(transect?.points
-                  ?.map((e) => e.latLng)
-                  .where(isFiniteLatLng)
-                  .toList() ??
-              []);
-          _markers = Set<Marker>.of(transect?.markers
-                  ?.where((e) => e.hasFiniteLatLng)
-                  .map((e) => e.toMarker()) ??
-              []);
-          return GoogleMap(
-            key: const Key('map'),
-            // on below line setting camera position
-            initialCameraPosition: _kHome,
-            // on below line we are setting markers on the map
-            markers: _markers,
-            polylines: _polyLines ?? {},
-            // on below line specifying map type.
-            mapType: dataService.mapType ?? MapType.hybrid,
-            // on below line setting user location enabled.
-            myLocationEnabled: true,
-            myLocationButtonEnabled: false,
-            // on below line setting compass enabled.
-            compassEnabled: true,
-            // on below line setting zoom controls enabled.
-            zoomControlsEnabled: true,
-            // on below line setting map toolbar enabled.
-            mapToolbarEnabled: true,
-            // on below line setting traffic enabled
-            trafficEnabled: false,
-            // on below line setting buildings enabled.
-            buildingsEnabled: false,
-            indoorViewEnabled: false,
-            // on below line specifying controller on map complete.
-            onMapCreated: (GoogleMapController mapController) {
-              controller = mapController;
-              _completer.complete(mapController);
-              DataService().controller = mapController;
-            },
-          );
-        }),
+            /// transect was cleared externally (e.g. "clear map") while
+            /// recording — stop the location listener too
+            if (transect == null && locationStream != null) {
+              WidgetsBinding.instance.addPostFrameCallback((_) async {
+                await _stopListener();
+                if (mounted) setState(() {});
+              });
+            }
+            _polyLines?.first.points.clear();
+            _polyLines?.first.points.addAll(
+              transect?.points
+                      ?.map((e) => e.latLng)
+                      .where(isFiniteLatLng)
+                      .toList() ??
+                  [],
+            );
+            _markers = Set<Marker>.of(
+              transect?.markers
+                      ?.where((e) => e.hasFiniteLatLng)
+                      .map((e) => e.toMarker()) ??
+                  [],
+            );
+            return GoogleMap(
+              key: const Key('map'),
+              // on below line setting camera position
+              initialCameraPosition: _kHome,
+              // on below line we are setting markers on the map
+              markers: _markers,
+              polylines: _polyLines ?? {},
+              // on below line specifying map type.
+              mapType: dataService.mapType ?? MapType.hybrid,
+              // on below line setting user location enabled.
+              myLocationEnabled: true,
+              myLocationButtonEnabled: false,
+              // on below line setting compass enabled.
+              compassEnabled: true,
+              // on below line setting zoom controls enabled.
+              zoomControlsEnabled: true,
+              // on below line setting map toolbar enabled.
+              mapToolbarEnabled: true,
+              // on below line setting traffic enabled
+              trafficEnabled: false,
+              // on below line setting buildings enabled.
+              buildingsEnabled: false,
+              indoorViewEnabled: false,
+              // on below line specifying controller on map complete.
+              onMapCreated: (GoogleMapController mapController) {
+                controller = mapController;
+                _completer.complete(mapController);
+                DataService().controller = mapController;
+              },
+            );
+          },
+        ),
       ),
       // on pressing floating action button the camera will take to user current location
       floatingActionButton: Padding(
         padding: EdgeInsets.only(
-
-            /// Calculate position somehow
-            top: (Theme.of(context).appBarTheme.toolbarHeight ?? 56) +
-                150 +
-                (DataService().isOpen.value ? 130 : 10)),
+          /// Calculate position somehow
+          top:
+              (Theme.of(context).appBarTheme.toolbarHeight ?? 56) +
+              150 +
+              (DataService().isOpen.value ? 130 : 10),
+        ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             FloatingActionButton(
-                onPressed: _goToCurrentLocation,
-                backgroundColor: Colors.grey.shade400,
-                foregroundColor: Colors.white,
-                child: const Icon(Icons.location_searching)),
+              onPressed: _goToCurrentLocation,
+              backgroundColor: Colors.grey.shade400,
+              foregroundColor: Colors.white,
+              child: const Icon(Icons.location_searching),
+            ),
             const SizedBox(height: 10),
             SpeedDial(
               openCloseDial: DataService().isOpen,
@@ -707,6 +801,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               onClose: () {
                 setState(() {});
               },
+
               /// Pause and Stop exist only while something is recording: the
               /// dial doubles as the Start button, and a tap on it flashed
               /// them for a frame or two before onOpen closed it again —
@@ -737,12 +832,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             ),
             SizedBox(height: DataService().isOpen.value ? 130 : 10),
             FloatingActionButton(
-                onPressed: locationStream != null
-                    ? _addMarker
-                    : () => showSnackBar('start_transect_first'.tr()),
-                backgroundColor: Colors.orangeAccent,
-                foregroundColor: Colors.white,
-                child: const Icon(Icons.add_location_alt_outlined)),
+              onPressed: locationStream != null
+                  ? _addMarker
+                  : () => showSnackBar('start_transect_first'.tr()),
+              backgroundColor: Colors.orangeAccent,
+              foregroundColor: Colors.white,
+              child: const Icon(Icons.add_location_alt_outlined),
+            ),
           ],
         ),
       ),
