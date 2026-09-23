@@ -106,5 +106,13 @@
     "photos": "Fotografije"
   },
   "select_atlas_code": "Izaberi atlas kod",
-  "select_code": "Izaberi kod: {}"
+  "select_code": "Izaberi kod: {}",
+  "no_points_save_prompt": "Nema zabeleženih tačaka. Da li želite da sačuvate transekt?",
+  "delete_transect_confirm": "Da li ste sigurni da želite da obrišete ovaj transekt?",
+  "delete_point_confirm": "Da li ste sigurni da želite da obrišete ovu tačku?",
+  "delete_record_confirm": "Da li ste sigurni da želite da obrišete ovaj zapis?",
+  "transect_deleted": "Transekt je obrisan",
+  "delete": "Obriši",
+  "transect": "Transekt",
+  "about": "O aplikaciji"
 }

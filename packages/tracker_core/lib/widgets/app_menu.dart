@@ -43,16 +43,13 @@ class AppMenu extends StatelessWidget {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Image.asset(
-              'assets/images/ant-biocode.png',
-              height: 80,
-            ),
+            Image.asset('assets/images/ant-biocode.png', height: 80),
             const SizedBox(height: 16),
             Text(
               TrackerConfig.current.appTitle,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             Text(
               'app_version'.tr(args: [packageInfo.version]),
@@ -67,9 +64,9 @@ class AppMenu extends StatelessWidget {
             const Divider(height: 32),
             Text(
               'copyright'.tr(),
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: Colors.grey,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.labelSmall?.copyWith(color: Colors.grey),
               textAlign: TextAlign.center,
             ),
           ],
@@ -97,8 +94,10 @@ class AppMenu extends StatelessWidget {
               children: [
                 _buildSectionHeader(context, 'field_work'.tr()),
                 ListTile(
-                  leading:
-                      const Icon(Icons.fmd_bad_outlined, color: Colors.green),
+                  leading: const Icon(
+                    Icons.fmd_bad_outlined,
+                    color: Colors.green,
+                  ),
                   title: Text('current_track'.tr()),
                   onTap: () {
                     Navigator.pop(context);
@@ -116,8 +115,10 @@ class AppMenu extends StatelessWidget {
                 const Divider(indent: 16, endIndent: 16),
                 _buildSectionHeader(context, 'data_management'.tr()),
                 ListTile(
-                  leading:
-                      const Icon(Icons.file_open_outlined, color: Colors.green),
+                  leading: const Icon(
+                    Icons.file_open_outlined,
+                    color: Colors.green,
+                  ),
                   title: Text('import_map'.tr()),
                   onTap: () {
                     Navigator.pop(context);
@@ -125,19 +126,25 @@ class AppMenu extends StatelessWidget {
                   },
                 ),
                 ListTile(
-                  leading:
-                      const Icon(Icons.backup_outlined, color: Colors.green),
+                  leading: const Icon(
+                    Icons.backup_outlined,
+                    color: Colors.green,
+                  ),
                   title: Text('backup_data'.tr()),
                   onTap: () {
                     final box = context.findRenderObject() as RenderBox?;
-                    final rect = box != null ? (box.localToGlobal(Offset.zero) & box.size) : null;
+                    final rect = box != null
+                        ? (box.localToGlobal(Offset.zero) & box.size)
+                        : null;
                     Navigator.pop(context);
                     backupData(rect);
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.cloud_download_outlined,
-                      color: Colors.green),
+                  leading: const Icon(
+                    Icons.cloud_download_outlined,
+                    color: Colors.green,
+                  ),
                   title: Text('restore_data'.tr()),
                   onTap: () {
                     Navigator.pop(context);
@@ -159,9 +166,15 @@ class AppMenu extends StatelessWidget {
                           children: [
                             _mapTypeButton(context, MapType.normal, 'map'.tr()),
                             _mapTypeButton(
-                                context, MapType.satellite, 'satellite'.tr()),
+                              context,
+                              MapType.satellite,
+                              'satellite'.tr(),
+                            ),
                             _mapTypeButton(
-                                context, MapType.hybrid, 'hybrid'.tr()),
+                              context,
+                              MapType.hybrid,
+                              'hybrid'.tr(),
+                            ),
                           ],
                         ),
                       ),
@@ -213,8 +226,10 @@ class AppMenu extends StatelessWidget {
                   ],
                 ),
                 ListTile(
-                  leading: const Icon(Icons.privacy_tip_outlined,
-                      color: Colors.green),
+                  leading: const Icon(
+                    Icons.privacy_tip_outlined,
+                    color: Colors.green,
+                  ),
                   title: Text('privacy_policy'.tr()),
                   onTap: () {
                     Navigator.pop(context);
@@ -237,10 +252,7 @@ class AppMenu extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Colors.green.shade700,
-            Colors.green.shade400,
-          ],
+          colors: [Colors.green.shade700, Colors.green.shade400],
         ),
       ),
       padding: const EdgeInsets.only(top: 40, left: 20, right: 20, bottom: 20),
@@ -256,8 +268,10 @@ class AppMenu extends StatelessWidget {
               TrackerConfig.current.logoAsset,
               width: 48,
               height: 48,
-              colorFilter:
-                  const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+              colorFilter: const ColorFilter.mode(
+                Colors.white,
+                BlendMode.srcIn,
+              ),
             ),
           ),
           const SizedBox(width: 16),
@@ -269,20 +283,20 @@ class AppMenu extends StatelessWidget {
                 Text(
                   TrackerConfig.current.appTitle,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 FutureBuilder<PackageInfo>(
                   future: PackageInfo.fromPlatform(),
                   builder: (context, snapshot) {
                     return Text(
-                      'app_version'.tr(args: [
-                        snapshot.hasData ? snapshot.data!.version : ''
-                      ]),
+                      'app_version'.tr(
+                        args: [snapshot.hasData ? snapshot.data!.version : ''],
+                      ),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.white.withValues(alpha: 0.8),
-                          ),
+                        color: Colors.white.withValues(alpha: 0.8),
+                      ),
                     );
                   },
                 ),
@@ -292,7 +306,7 @@ class AppMenu extends StatelessWidget {
           IconButton(
             onPressed: () => _showAboutDialog(context),
             icon: const Icon(Icons.info_outline, color: Colors.white),
-            tooltip: 'About',
+            tooltip: 'about'.tr(),
           ),
         ],
       ),
@@ -305,10 +319,10 @@ class AppMenu extends StatelessWidget {
       child: Text(
         title.toUpperCase(),
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: Colors.green.shade700,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.2,
-            ),
+          color: Colors.green.shade700,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 1.2,
+        ),
       ),
     );
   }
@@ -332,11 +346,7 @@ class AppMenu extends StatelessWidget {
 }
 
 class MenuIcon extends StatelessWidget {
-  const MenuIcon({
-    super.key,
-    this.asset,
-    this.height,
-  });
+  const MenuIcon({super.key, this.asset, this.height});
 
   final String? asset;
   final double? height;
@@ -344,7 +354,9 @@ class MenuIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SvgPicture.asset(
-      asset == null ? TrackerConfig.current.logoAsset : 'assets/icons/$asset.svg',
+      asset == null
+          ? TrackerConfig.current.logoAsset
+          : 'assets/icons/$asset.svg',
       height: height ?? 24,
       semanticsLabel: '${TrackerConfig.current.appTitle} Logo',
       colorFilter: const ColorFilter.mode(Colors.black, BlendMode.srcIn),

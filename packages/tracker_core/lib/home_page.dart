@@ -382,7 +382,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     showTextInputDialog(
       'enter_transect_name'.tr(),
       'transect_name'.tr(),
-      'Transect ${DateFormat('dd.MM.yyyy').format(DateTime.now())}',
+      '${'transect'.tr()} ${DateFormat('dd.MM.yyyy').format(DateTime.now())}',
       (name) async {
         await _stopListener();
 

@@ -112,5 +112,7 @@
   "delete_point_confirm": "Are you sure you want to delete this point?",
   "delete_record_confirm": "Are you sure you want to delete this record?",
   "transect_deleted": "Transect deleted",
-  "delete": "Delete"
+  "delete": "Delete",
+  "transect": "Transect",
+  "about": "About"
 }

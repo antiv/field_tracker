@@ -66,7 +66,7 @@ class _TransectsHistoryState extends State<TransectsHistory> {
                         // leading: const Icon(Icons.map_outlined),
                         title: Text(
                           transects[index].name ??
-                              'Transect ${transects[index].id}: '
+                              '${'transect'.tr()} ${transects[index].id}: '
                                   '${DateFormat('dd.MM.yyyy HH:mm').format(transects[index].startDate)} - '
                                   '${transects[index].endDate != null ? DateFormat('HH:mm').format(transects[index].endDate!) : 'in_progress'.tr()}',
                           style: const TextStyle(

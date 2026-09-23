@@ -26,14 +26,14 @@ class Transect {
   List<Placemark>? markers;
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'startDate': startDate.toIso8601String(),
-        'name': name,
-        'endDate': endDate?.toIso8601String(),
-        'description': description,
-        'points': points?.map((p) => p.toJson()).toList() ?? [],
-        'markers': markers?.map((m) => m.toJson()).toList() ?? [],
-      };
+    'id': id,
+    'startDate': startDate.toIso8601String(),
+    'name': name,
+    'endDate': endDate?.toIso8601String(),
+    'description': description,
+    'points': points?.map((p) => p.toJson()).toList() ?? [],
+    'markers': markers?.map((m) => m.toJson()).toList() ?? [],
+  };
 
   static Transect fromJson(Map<String, dynamic> json) => Transect()
     ..id = (json['id'] as int?) ?? 0
@@ -43,12 +43,14 @@ class Transect {
         ? DateTime.parse(json['endDate'] as String)
         : null
     ..description = json['description'] as String?
-    ..points = (json['points'] as List<dynamic>?)
+    ..points =
+        (json['points'] as List<dynamic>?)
             ?.map((p) => Point.fromJson(p as Map<String, dynamic>))
             .nonNulls
             .toList() ??
         []
-    ..markers = (json['markers'] as List<dynamic>?)
+    ..markers =
+        (json['markers'] as List<dynamic>?)
             ?.map((m) => Placemark.fromJson(m as Map<String, dynamic>))
             .toList() ??
         [];
@@ -78,12 +80,12 @@ class Transect {
     return '';
   }
 
-  /// get duration in format hh:mm:ss - hh:mm:ss
+  /// get duration in format HH:mm:ss - HH:mm:ss
   String get fromTo {
     if (endDate == null) {
-      return DateFormat('hh:mm:ss').format(startDate);
+      return DateFormat('HH:mm:ss').format(startDate);
     }
-    return '${DateFormat('hh:mm:ss').format(startDate)} - ${DateFormat('hh:mm:ss').format(endDate!)}';
+    return '${DateFormat('HH:mm:ss').format(startDate)} - ${DateFormat('HH:mm:ss').format(endDate!)}';
   }
 
   double get distance {
@@ -106,19 +108,19 @@ class Transect {
     return 0;
   }
 
-  /// get from - to date in format dd.mm.yyyy hh:mm - hh:mm
+  /// get from - to date in format dd.MM.yyyy HH:mm:ss - HH:mm:ss
   String get dateRange {
-    /// if same day return end in hh:mm format
+    /// if same day return end in HH:mm:ss format
     if (startDate.year == endDate?.year &&
         startDate.month == endDate?.month &&
         startDate.day == endDate?.day) {
-      return '${DateFormat('dd.MM.yyyy hh:mm:ss').format(startDate)} - ${DateFormat('hh:mm:ss').format(endDate!)}';
+      return '${DateFormat('dd.MM.yyyy HH:mm:ss').format(startDate)} - ${DateFormat('HH:mm:ss').format(endDate!)}';
     } else if (endDate != null) {
-      return '${DateFormat('dd.MM.yyyy hh:mm:ss').format(startDate)} - ${DateFormat('dd.MM.yyyy hh:mm:ss').format(endDate!)}';
+      return '${DateFormat('dd.MM.yyyy HH:mm:ss').format(startDate)} - ${DateFormat('dd.MM.yyyy HH:mm:ss').format(endDate!)}';
     }
 
     /// start date only
-    return DateFormat('dd.MM.yyyy hh:mm:ss').format(startDate);
+    return DateFormat('dd.MM.yyyy HH:mm:ss').format(startDate);
   }
 
   /// Convert the transect to CSV: the app's record columns, then the
@@ -127,20 +129,24 @@ class Transect {
   String toCSV() {
     final config = TrackerConfig.current;
     final sb = StringBuffer();
-    sb.writeln([
-      ...config.exportColumnLabels(),
-      'csv_header.transect'.tr(),
-      'csv_header.point'.tr(),
-      'csv_header.photos'.tr(),
-    ].map(csvCell).join(','));
+    sb.writeln(
+      [
+        ...config.exportColumnLabels(),
+        'csv_header.transect'.tr(),
+        'csv_header.point'.tr(),
+        'csv_header.photos'.tr(),
+      ].map(csvCell).join(','),
+    );
     for (final point in markers ?? const <Placemark>[]) {
       for (final record in point.records ?? const <TrackerRecord>[]) {
-        sb.writeln([
-          ...config.exportValues(point, record),
-          name ?? '',
-          '${(point.id ?? 0) + 1}',
-          record.photos.join('; '),
-        ].map(csvCell).join(','));
+        sb.writeln(
+          [
+            ...config.exportValues(point, record),
+            name ?? '',
+            '${(point.id ?? 0) + 1}',
+            record.photos.join('; '),
+          ].map(csvCell).join(','),
+        );
       }
     }
     return sb.toString();
@@ -161,16 +167,18 @@ class Transect {
   }
 
   /// Photo file names of every record in the transect.
-  List<String> get photoNames =>
-      [for (final marker in markers ?? <Placemark>[]) ...marker.photoNames];
+  List<String> get photoNames => [
+    for (final marker in markers ?? <Placemark>[]) ...marker.photoNames,
+  ];
 
   /// True when any record names a photo. Deliberately reads nothing off the
   /// disk — the history list calls this from its item builder on every frame.
   /// The export checks what is actually there, once, in [shareKML].
   bool get hasPhotos =>
-      markers?.any((marker) =>
-          marker.records?.any((record) => record.photos.isNotEmpty) ??
-          false) ??
+      markers?.any(
+        (marker) =>
+            marker.records?.any((record) => record.photos.isNotEmpty) ?? false,
+      ) ??
       false;
 
   /// Both the file name and the share subject are built from this. Some share
@@ -178,24 +186,32 @@ class Transect {
   /// path separator either — that is how an export came back as a KMZ with no
   /// extension and two stray directories in its name.
   String get _exportLabel => sanitizeFileName(
-      '${name ?? ''} ${DateFormat('dd.MM.yyyy').format(startDate)}');
+    '${name ?? ''} ${DateFormat('dd.MM.yyyy').format(startDate)}',
+  );
 
   String get _exportFileBase => sanitizeFileName(
-      '${name ?? ''}-${DateFormat('dd-MM-yyyy').format(startDate)}');
+    '${name ?? ''}-${DateFormat('dd-MM-yyyy').format(startDate)}',
+  );
 
   /// share transect as CSV file
   Future<void> shareCSV([Rect? sharePositionOrigin]) async {
     /// UTF-8 with BOM — species names and notes carry č/ć/š/ž/đ and Excel
     /// needs the BOM to pick the right encoding
-    Uint8List bytes =
-        Uint8List.fromList([0xEF, 0xBB, 0xBF, ...utf8.encode(toCSV())]);
+    Uint8List bytes = Uint8List.fromList([
+      0xEF,
+      0xBB,
+      0xBF,
+      ...utf8.encode(toCSV()),
+    ]);
     String path = await storeFileTemporarily(bytes, '$_exportFileBase.csv');
-    await SharePlus.instance.share(ShareParams(
-      files: [XFile(path)],
-      text: _exportLabel,
-      subject: _exportLabel,
-      sharePositionOrigin: sharePositionOrigin,
-    ));
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile(path)],
+        text: _exportLabel,
+        subject: _exportLabel,
+        sharePositionOrigin: sharePositionOrigin,
+      ),
+    );
   }
 
   /// Share the transect as KML, or as KMZ when there are photos to embed —
@@ -204,8 +220,9 @@ class Transect {
   Future<void> shareKML([Rect? sharePositionOrigin]) async {
     final photos = hasPhotos ? KMZUtils.availablePhotos(this) : <String>[];
     final label = photos.isEmpty ? 'KML' : 'KMZ';
-    final String path =
-        await temporaryFilePath('$_exportFileBase.${label.toLowerCase()}');
+    final String path = await temporaryFilePath(
+      '$_exportFileBase.${label.toLowerCase()}',
+    );
 
     if (photos.isEmpty) {
       await File(path).writeAsBytes(utf8.encode(toKML()), flush: true);
@@ -213,16 +230,19 @@ class Transect {
       await KMZUtils.writeKMZ(this, path, photos);
     }
 
-    await SharePlus.instance.share(ShareParams(
-      files: [XFile(path)],
-      text: '$_exportLabel $label',
-      subject: '$_exportLabel $label',
-      sharePositionOrigin: sharePositionOrigin,
-    ));
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile(path)],
+        text: '$_exportLabel $label',
+        subject: '$_exportLabel $label',
+        sharePositionOrigin: sharePositionOrigin,
+      ),
+    );
   }
 
   void goToFirst() {
-    final first = points?.map((p) => p.latLng).where(isFiniteLatLng).firstOrNull ??
+    final first =
+        points?.map((p) => p.latLng).where(isFiniteLatLng).firstOrNull ??
         markers
             ?.where((m) => m.hasFiniteLatLng)
             .map((m) => m.latLng)

@@ -207,6 +207,43 @@ void main() {
       );
       expect('transect_deleted'.tr(), 'Transect deleted');
       expect('delete'.tr(), 'Delete');
+      expect('transect'.tr(), 'Transect');
+      expect('about'.tr(), 'About');
+    });
+
+    testWidgets('core strings load in Serbian', (tester) async {
+      await tester.runAsync(() async {
+        await tester.pumpWidget(
+          localizedTestApp(startLocale: const Locale('sr', 'Latn')),
+        );
+        await tester.pump();
+      });
+      await tester.pumpAndSettle();
+      expect('save'.tr(), 'Sačuvaj');
+      expect(
+        'backup_text'.tr(namedArgs: appArgs),
+        'Test Tracker rezervna kopija',
+      );
+      expect(
+        'no_points_save_prompt'.tr(),
+        'Nema zabeleženih tačaka. Da li želite da sačuvate transekt?',
+      );
+      expect(
+        'delete_transect_confirm'.tr(),
+        'Da li ste sigurni da želite da obrišete ovaj transekt?',
+      );
+      expect(
+        'delete_point_confirm'.tr(),
+        'Da li ste sigurni da želite da obrišete ovu tačku?',
+      );
+      expect(
+        'delete_record_confirm'.tr(),
+        'Da li ste sigurni da želite da obrišete ovaj zapis?',
+      );
+      expect('transect_deleted'.tr(), 'Transekt je obrisan');
+      expect('delete'.tr(), 'Obriši');
+      expect('transect'.tr(), 'Transekt');
+      expect('about'.tr(), 'O aplikaciji');
     });
 
     testWidgets('showDeleteWithPhotosDialog uses custom title when provided', (

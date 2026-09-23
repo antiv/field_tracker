@@ -7,6 +7,7 @@ import 'package:tracker_core/service/data_service.dart';
 import 'package:tracker_location_permission/tracker_location_permission.dart';
 import 'package:tracker_core/utils/geo_utils.dart';
 import 'package:tracker_core/utils/ux_builder.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
@@ -61,14 +62,17 @@ Future<bool> ensureLocationPermission(Location location) async {
 }
 
 Future<LocationData?> goToCurrentLocation(
-    Location location,
-    GoogleMapController? controller,
-    Completer<GoogleMapController> completer) async {
+  Location location,
+  GoogleMapController? controller,
+  Completer<GoogleMapController> completer,
+) async {
   if (!await ensureLocationPermission(location)) return null;
 
   LocationData currentLoc;
   try {
-    currentLoc = await location.getLocation().timeout(const Duration(seconds: 5));
+    currentLoc = await location.getLocation().timeout(
+      const Duration(seconds: 5),
+    );
   } catch (e) {
     log('Error getting current location: ${e.toString()}');
     return null;
@@ -80,13 +84,17 @@ Future<LocationData?> goToCurrentLocation(
   return currentLoc;
 }
 
-Future<void> goToLocation(LatLng target, GoogleMapController? controller,
-    Completer<GoogleMapController> completer) async {
+Future<void> goToLocation(
+  LatLng target,
+  GoogleMapController? controller,
+  Completer<GoogleMapController> completer,
+) async {
   if (!isFiniteLatLng(target)) return;
   controller ??= await completer.future;
   try {
     await controller.animateCamera(
-        CameraUpdate.newCameraPosition(CameraPosition(target: target, zoom: 16)));
+      CameraUpdate.newCameraPosition(CameraPosition(target: target, zoom: 16)),
+    );
   } on PlatformException catch (e) {
     log('Could not move the camera: ${e.message}');
   }
@@ -101,9 +109,7 @@ bool _backgroundPermissionAsked = false;
 /// for the duration of a recording — [disableBackgroundMode] is its pair.
 /// Used to run on every launch and my-location tap, which left the service
 /// (and its notification) up with no transect in progress.
-Future<bool> enableBackgroundMode(
-  Location location,
-) async {
+Future<bool> enableBackgroundMode(Location location) async {
   bool bgModeEnabled = await location.isBackgroundModeEnabled();
   if (bgModeEnabled) {
     return true;
@@ -155,7 +161,7 @@ Marker getNewMarker(String id, LocationData locationData, Function onTap) {
   return Marker(
     markerId: MarkerId(id),
     position: LatLng(locationData.latitude, locationData.longitude),
-    infoWindow: InfoWindow(title: 'Point $id'),
+    infoWindow: InfoWindow(title: '${'point'.tr()} $id'),
     icon: BitmapDescriptor.defaultMarker,
     //BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
     onTap: () => onTap(id),
@@ -163,8 +169,9 @@ Marker getNewMarker(String id, LocationData locationData, Function onTap) {
 }
 
 void showMarkerInfo(int index) {
-  final selected =
-      DataService().transect?.markers?.firstWhere((m) => m.id == index);
+  final selected = DataService().transect?.markers?.firstWhere(
+    (m) => m.id == index,
+  );
   showBottomModal(MarkerInfo(selected: selected));
 }
 
@@ -174,20 +181,27 @@ double calculateDistance(List<LatLng> polyline) {
     if (i < polyline.length - 1) {
       // skip the last index
       totalDistance += getStraightLineDistance(
-          polyline[i + 1].latitude,
-          polyline[i + 1].longitude,
-          polyline[i].latitude,
-          polyline[i].longitude);
+        polyline[i + 1].latitude,
+        polyline[i + 1].longitude,
+        polyline[i].latitude,
+        polyline[i].longitude,
+      );
     }
   }
   return totalDistance;
 }
 
-double getStraightLineDistance(double lat1, double lon1, double lat2, double lon2) {
+double getStraightLineDistance(
+  double lat1,
+  double lon1,
+  double lat2,
+  double lon2,
+) {
   const int R = 6371; // Radius of the earth in km
   final double dLat = deg2rad(lat2 - lat1);
   final double dLon = deg2rad(lon2 - lon1);
-  final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+  final a =
+      math.sin(dLat / 2) * math.sin(dLat / 2) +
       math.cos(deg2rad(lat1)) *
           math.cos(deg2rad(lat2)) *
           math.sin(dLon / 2) *
