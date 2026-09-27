@@ -207,7 +207,7 @@ void main() {
       'Species,Date,Observation date,LAT,LONG,Altitude,GPS accuracy,Locality,'
       'Development stage,Sex,Data type,Collection method,Habitat type,'
       'Water habitat bed type,Exact number of individuals,Abundance range,Note,'
-      'Transect,Point,Photos',
+      'Transect,Point,Photos,Point photos',
     );
     expect(
       lines[1],
@@ -215,10 +215,10 @@ void main() {
       'Deliblatska peščara,Adult,F,Observation,Hand capture,'
       'Settlement and buildings,Muddy,3,2-5,'
       '"Uz put, ""kod mosta""; kiša",Test transekt,1,'
-      '"HT_20260504_211530_0a1b.jpg; weird, name.jpg"',
+      '"HT_20260504_211530_0a1b.jpg; weird, name.jpg",',
     );
     // a record with only the required fields must still line up
-    expect(lines[2].split(',').length, 20);
+    expect(lines[2].split(',').length, 21);
 
     // ── KML round trip ───────────────────────────────────────────────────
     final restored =

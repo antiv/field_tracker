@@ -74,7 +74,7 @@ void main() {
       lines.first,
       'Date,Time,Latitude,Longitude,Latitude (DMS),Longitude (DMS),'
       'Nest position,Nest state,Young,Atlas code,Place,Municipality,Note,'
-      'Surveyor,Email,Phone,Transect,Point,Photos',
+      'Surveyor,Email,Phone,Transect,Point,Photos,Point photos',
     );
     expect(
       lines[1],

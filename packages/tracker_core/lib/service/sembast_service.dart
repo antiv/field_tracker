@@ -6,7 +6,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sembast/sembast_io.dart';
 
 import '../config/tracker_config.dart';
-import '../model/placemark.dart';
 import '../model/transect.dart';
 import '../utils/backup_utils.dart';
 import 'media_service.dart';
@@ -149,11 +148,7 @@ class SembastService with ChangeNotifier {
 
   Iterable<String> _photoNames(Iterable<Transect> transects) sync* {
     for (final transect in transects) {
-      for (final marker in transect.markers ?? const <Placemark>[]) {
-        for (final record in marker.records ?? const <TrackerRecord>[]) {
-          yield* record.photos;
-        }
-      }
+      yield* transect.photoNames;
     }
   }
 

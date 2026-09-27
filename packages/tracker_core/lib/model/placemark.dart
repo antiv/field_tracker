@@ -21,6 +21,10 @@ class Placemark {
   String? description;
   List<TrackerRecord>? records = [];
 
+  /// Photos of the point itself — the habitat, the spot — as opposed to the
+  /// ones of a record. File names, never paths, like [TrackerRecord.photos].
+  List<String> photos = [];
+
   Placemark({
     this.id,
     this.startDate,
@@ -31,10 +35,12 @@ class Placemark {
     this.accuracy,
     this.description,
     this.records,
-  });
+    List<String>? photos,
+  }) : photos = photos ?? [];
 
-  /// Photo file names of every record on this point.
+  /// Photo file names of the point and of every record on it.
   List<String> get photoNames => [
+    ...photos,
     for (final record in records ?? <TrackerRecord>[]) ...record.photos,
   ];
 
@@ -50,6 +56,7 @@ class Placemark {
     'accuracy': accuracy,
     'description': description,
     'species': records?.map((s) => s.toJson()).toList() ?? [],
+    'photos': photos,
   };
 
   static Placemark fromJson(Map<String, dynamic> json) => Placemark(
@@ -66,7 +73,12 @@ class Placemark {
     accuracy: finiteOrNull(json['accuracy'] as num?),
     description: json['description'] as String?,
     records: recordsFromJson(json['species']),
+    photos: photosFromJson(json['photos']),
   );
+
+  /// Absent on every point stored before points had photos of their own.
+  static List<String> photosFromJson(Object? list) =>
+      (list as List<dynamic>?)?.map((e) => e as String).toList() ?? [];
 
   /// A list of records as stored — in the database, a backup or a KML payload.
   static List<TrackerRecord> recordsFromJson(Object? list) =>

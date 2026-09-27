@@ -3,8 +3,6 @@ import 'dart:convert';
 import 'package:archive/archive_io.dart';
 import 'package:path/path.dart' as p;
 
-import '../config/tracker_config.dart';
-import '../model/placemark.dart';
 import '../model/transect.dart';
 import '../service/media_service.dart';
 import 'kml_utils.dart';
@@ -19,12 +17,7 @@ class KMZUtils {
   /// Photo file names referenced by [transect] that are actually on disk.
   /// Touches the file system, so call it once per export, never from a build.
   static List<String> availablePhotos(Transect transect) {
-    final names = <String>{};
-    for (final marker in transect.markers ?? <Placemark>[]) {
-      for (final record in marker.records ?? <TrackerRecord>[]) {
-        names.addAll(record.photos);
-      }
-    }
+    final names = transect.photoNames.toSet();
     return names.where(MediaService().exists).toList()..sort();
   }
 

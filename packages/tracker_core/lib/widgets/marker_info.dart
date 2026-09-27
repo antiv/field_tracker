@@ -5,8 +5,10 @@ import 'package:flutter/material.dart';
 import '../config/tracker_config.dart';
 import '../model/placemark.dart';
 import '../service/data_service.dart';
+import '../service/media_service.dart';
 import '../service/sembast_service.dart';
 import '../utils/ux_builder.dart';
+import 'photo_strip.dart';
 import 'record_form_shell.dart';
 
 class MarkerInfo extends StatefulWidget {
@@ -33,6 +35,22 @@ class _MarkerInfoState extends State<MarkerInfo> {
         },
       ),
     );
+  }
+
+  /// Point photos are saved the moment they change: there is no form to
+  /// cancel here, so a photo the strip dropped (after its own confirmation)
+  /// is gone for good and its file goes with it. The gallery copy stays.
+  void _setPhotos(List<String> names) {
+    final point = widget.selected;
+    if (point == null) return;
+    final removed = point.photos.toSet().difference(names.toSet());
+    setState(() => point.photos = names);
+    final active = DataService().transect;
+    if (active != null) {
+      active.updateMarker(point);
+      SembastService().updateTransect(active);
+    }
+    if (removed.isNotEmpty) MediaService().delete(removed);
   }
 
   @override
@@ -74,6 +92,11 @@ class _MarkerInfoState extends State<MarkerInfo> {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 8),
+          PhotoStrip(
+            names: widget.selected?.photos ?? const [],
+            onChanged: _setPhotos,
           ),
           const Divider(height: 16),
           Expanded(

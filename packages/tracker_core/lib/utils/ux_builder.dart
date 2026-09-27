@@ -45,8 +45,12 @@ void showBottomModal(Widget widget) {
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
     showDragHandle: true,
+    useSafeArea: true,
+
+    /// Android 15 draws edge to edge: without the bottom inset the sheet's
+    /// buttons end up under the navigation bar
     builder: (BuildContext context) {
-      return widget;
+      return SafeArea(top: false, child: widget);
     },
   );
 }
@@ -229,7 +233,9 @@ void showFullScreenDialog(Widget widget, {String? title}) {
             icon: const Icon(Icons.close),
           ),
         ),
-        body: widget,
+        /// the AppBar takes the top inset; the form's buttons at the bottom
+        /// must stay clear of the navigation bar
+        body: SafeArea(top: false, child: widget),
       );
     },
   );

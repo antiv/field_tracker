@@ -147,16 +147,32 @@ void main() {
 
   group('CSV', () {
     test('app columns first, then transect, point and photos; RFC 4180', () {
-      final lines = const LineSplitter().convert(buildTransect().toCSV());
+      final transect = buildTransect();
+      transect.markers!.single.photos = ['p.jpg'];
+      final lines = const LineSplitter().convert(transect.toCSV());
       expect(
         lines.first,
-        'Species,Note,csv_header.transect,csv_header.point,csv_header.photos',
+        'Species,Note,csv_header.transect,csv_header.point,csv_header.photos,'
+        'csv_header.point_photos',
       );
       expect(
         lines[1],
-        'Parus major,"uz put, ""kod mosta""","Test, transekt",1,"a.jpg; b, c.jpg"',
+        'Parus major,"uz put, ""kod mosta""","Test, transekt",1,"a.jpg; b, c.jpg",p.jpg',
       );
-      expect(lines[2], 'Sitta europaea,,"Test, transekt",1,');
+      expect(lines[2], 'Sitta europaea,,"Test, transekt",1,,p.jpg');
+    });
+  });
+
+  group('point ids', () {
+    test('a new point never reuses the id of one still there', () {
+      final transect = buildTransect()
+        ..markers!.addAll([Placemark(id: 1), Placemark(id: 2)]);
+      expect(transect.nextMarkerId, 3);
+
+      /// after deleting point 2 of 3, the count would hand out id 2 again
+      transect.markers!.removeAt(1);
+      expect(transect.nextMarkerId, 3);
+      expect((Transect()..markers = []).nextMarkerId, 0);
     });
   });
 

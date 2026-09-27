@@ -55,6 +55,14 @@ class Transect {
             .toList() ??
         [];
 
+  /// Id for a new point: one past the highest in use. The count of points
+  /// would hand out an id that is still taken as soon as a point had been
+  /// deleted, and two map markers with one id show as one.
+  int get nextMarkerId => (markers ?? const <Placemark>[]).fold<int>(
+    0,
+    (next, m) => m.id != null && m.id! >= next ? m.id! + 1 : next,
+  );
+
   void addMarker(Placemark marker) {
     markers?.add(marker);
   }
@@ -135,6 +143,7 @@ class Transect {
         'csv_header.transect'.tr(),
         'csv_header.point'.tr(),
         'csv_header.photos'.tr(),
+        'csv_header.point_photos'.tr(),
       ].map(csvCell).join(','),
     );
     for (final point in markers ?? const <Placemark>[]) {
@@ -145,6 +154,7 @@ class Transect {
             name ?? '',
             '${(point.id ?? 0) + 1}',
             record.photos.join('; '),
+            point.photos.join('; '),
           ].map(csvCell).join(','),
         );
       }
@@ -166,18 +176,20 @@ class Transect {
     return KMLUtils.generateKML(this);
   }
 
-  /// Photo file names of every record in the transect.
+  /// Photo file names of every point and record in the transect.
   List<String> get photoNames => [
     for (final marker in markers ?? <Placemark>[]) ...marker.photoNames,
   ];
 
-  /// True when any record names a photo. Deliberately reads nothing off the
+  /// True when any point or record names a photo. Deliberately reads nothing off the
   /// disk — the history list calls this from its item builder on every frame.
   /// The export checks what is actually there, once, in [shareKML].
   bool get hasPhotos =>
       markers?.any(
         (marker) =>
-            marker.records?.any((record) => record.photos.isNotEmpty) ?? false,
+            marker.photos.isNotEmpty ||
+            (marker.records?.any((record) => record.photos.isNotEmpty) ??
+                false),
       ) ??
       false;
 

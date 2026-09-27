@@ -561,23 +561,34 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       return;
     }
 
+    /// The point is born with the first save; "save and new" keeps adding
+    /// to that same point. Creating one per save stacked several points on
+    /// the exact same spot, where only the top one could be tapped.
+    Placemark? created;
     showFullScreenDialog(
       RecordFormShell(
         onSaved: (record, close) {
           setState(() {
-            transect?.markers = transect?.markers?.toList(growable: true) ?? [];
-            transect?.markers?.add(
-              Placemark(
-                latitude: markerLatitude,
-                longitude: markerLongitude,
-                altitude: markerAltitude,
-                accuracy: markerAccuracy,
-                startDate: DateTime.now(),
-                endDate: null,
-                id: transect?.markers?.length ?? 0,
-                records: [record],
-              ),
+            final point = created;
+            if (point != null) {
+              point.records = point.records?.toList(growable: true) ?? [];
+              point.records!.add(record);
+              return;
+            }
+            final active = transect;
+            if (active == null) return;
+            active.markers = active.markers?.toList(growable: true) ?? [];
+            created = Placemark(
+              latitude: markerLatitude,
+              longitude: markerLongitude,
+              altitude: markerAltitude,
+              accuracy: markerAccuracy,
+              startDate: DateTime.now(),
+              endDate: null,
+              id: active.nextMarkerId,
+              records: [record],
             );
+            active.markers!.add(created!);
           });
           _goToCurrentLocation();
           _saveTransect();

@@ -103,7 +103,8 @@
   "csv_header": {
     "transect": "Transect",
     "point": "Point",
-    "photos": "Photos"
+    "photos": "Photos",
+    "point_photos": "Point photos"
   },
   "select_atlas_code": "Select atlas code",
   "select_code": "Select code: {}",
