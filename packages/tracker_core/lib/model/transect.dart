@@ -134,7 +134,11 @@ class Transect {
   /// Convert the transect to CSV: the app's record columns, then the
   /// transect name, the point number and the photo names. Headers follow the
   /// app language, so the sheet the surveyor pastes into reads naturally.
-  String toCSV() {
+  String toCSV() => csvOf([this]);
+
+  /// Several transects in one sheet: one header, then every transect's rows.
+  /// The transect column already tells them apart.
+  static String csvOf(Iterable<Transect> transects) {
     final config = TrackerConfig.current;
     final sb = StringBuffer();
     sb.writeln(
@@ -146,17 +150,19 @@ class Transect {
         'csv_header.point_photos'.tr(),
       ].map(csvCell).join(','),
     );
-    for (final point in markers ?? const <Placemark>[]) {
-      for (final record in point.records ?? const <TrackerRecord>[]) {
-        sb.writeln(
-          [
-            ...config.exportValues(point, record),
-            name ?? '',
-            '${(point.id ?? 0) + 1}',
-            record.photos.join('; '),
-            point.photos.join('; '),
-          ].map(csvCell).join(','),
-        );
+    for (final transect in transects) {
+      for (final point in transect.markers ?? const <Placemark>[]) {
+        for (final record in point.records ?? const <TrackerRecord>[]) {
+          sb.writeln(
+            [
+              ...config.exportValues(point, record),
+              transect.name ?? '',
+              '${(point.id ?? 0) + 1}',
+              record.photos.join('; '),
+              point.photos.join('; '),
+            ].map(csvCell).join(','),
+          );
+        }
       }
     }
     return sb.toString();
@@ -206,51 +212,105 @@ class Transect {
   );
 
   /// share transect as CSV file
-  Future<void> shareCSV([Rect? sharePositionOrigin]) async {
+  Future<void> shareCSV([Rect? sharePositionOrigin]) =>
+      shareCSVOf([this], sharePositionOrigin);
+
+  /// One CSV for all of [transects] — a sheet is where they get compared.
+  static Future<void> shareCSVOf(
+    List<Transect> transects, [
+    Rect? sharePositionOrigin,
+  ]) async {
+    if (transects.isEmpty) return;
+    final single = transects.length == 1 ? transects.single : null;
+
     /// UTF-8 with BOM — species names and notes carry č/ć/š/ž/đ and Excel
     /// needs the BOM to pick the right encoding
     Uint8List bytes = Uint8List.fromList([
       0xEF,
       0xBB,
       0xBF,
-      ...utf8.encode(toCSV()),
+      ...utf8.encode(csvOf(transects)),
     ]);
-    String path = await storeFileTemporarily(bytes, '$_exportFileBase.csv');
+    final base = single?._exportFileBase ?? _multiExportFileBase(transects);
+    final label = single?._exportLabel ?? _multiExportLabel(transects);
+    String path = await storeFileTemporarily(bytes, '$base.csv');
     await SharePlus.instance.share(
       ShareParams(
         files: [XFile(path)],
-        text: _exportLabel,
-        subject: _exportLabel,
+        text: label,
+        subject: label,
         sharePositionOrigin: sharePositionOrigin,
       ),
     );
   }
 
   /// Share the transect as KML, or as KMZ when there are photos to embed —
-  /// a plain KML could only name them. This is the one place that asks the
-  /// disk which of the named photos still exist.
-  Future<void> shareKML([Rect? sharePositionOrigin]) async {
-    final photos = hasPhotos ? KMZUtils.availablePhotos(this) : <String>[];
-    final label = photos.isEmpty ? 'KML' : 'KMZ';
-    final String path = await temporaryFilePath(
-      '$_exportFileBase.${label.toLowerCase()}',
-    );
+  /// a plain KML could only name them.
+  Future<void> shareKML([Rect? sharePositionOrigin]) =>
+      shareKMLOf([this], sharePositionOrigin);
 
-    if (photos.isEmpty) {
-      await File(path).writeAsBytes(utf8.encode(toKML()), flush: true);
-    } else {
-      await KMZUtils.writeKMZ(this, path, photos);
+  /// One KML/KMZ per transect, all in one share: an import reads a file as
+  /// one transect, so merging them would fuse the routes on the way back.
+  static Future<void> shareKMLOf(
+    List<Transect> transects, [
+    Rect? sharePositionOrigin,
+  ]) async {
+    if (transects.isEmpty) return;
+    final files = <XFile>[];
+    final used = <String>{};
+    var anyKmz = false;
+    for (final transect in transects) {
+      /// two transects with the same name on the same day would otherwise
+      /// write over each other's file
+      var base = transect._exportFileBase;
+      if (!used.add(base)) {
+        base = '$base-${transect.id}';
+        used.add(base);
+      }
+      final (path, isKmz) = await transect._writeKMLFile(base);
+      anyKmz |= isKmz;
+      files.add(XFile(path));
     }
-
+    final label = transects.length == 1
+        ? '${transects.single._exportLabel} ${anyKmz ? 'KMZ' : 'KML'}'
+        : _multiExportLabel(transects);
     await SharePlus.instance.share(
       ShareParams(
-        files: [XFile(path)],
-        text: '$_exportLabel $label',
-        subject: '$_exportLabel $label',
+        files: files,
+        text: label,
+        subject: label,
         sharePositionOrigin: sharePositionOrigin,
       ),
     );
   }
+
+  /// Writes the transect as `<base>.kml`, or `<base>.kmz` when there are
+  /// photos on disk to embed. This is the one place that asks the disk which
+  /// of the named photos still exist.
+  Future<(String, bool)> _writeKMLFile(String base) async {
+    final photos = hasPhotos ? KMZUtils.availablePhotos(this) : <String>[];
+    final isKmz = photos.isNotEmpty;
+    final String path = await temporaryFilePath(
+      '$base.${isKmz ? 'kmz' : 'kml'}',
+    );
+    if (isKmz) {
+      await KMZUtils.writeKMZ(this, path, photos);
+    } else {
+      await File(path).writeAsBytes(utf8.encode(toKML()), flush: true);
+    }
+    return (path, isKmz);
+  }
+
+  static String _multiExportLabel(List<Transect> transects) => sanitizeFileName(
+    '${TrackerConfig.current.appTitle} '
+    '${'transects_export'.tr(args: ['${transects.length}'])}',
+  );
+
+  static String _multiExportFileBase(List<Transect> transects) =>
+      sanitizeFileName(
+        '${TrackerConfig.current.appTitle}-${transects.length}-'
+        '${DateFormat('dd-MM-yyyy').format(DateTime.now())}',
+      );
 
   void goToFirst() {
     final first =

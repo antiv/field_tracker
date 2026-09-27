@@ -163,6 +163,24 @@ void main() {
     });
   });
 
+  group('CSV of several transects', () {
+    test('one header, every transect\'s rows, told apart by name', () {
+      final second = buildTransect(records: [TestRecord(species: 'Bufo bufo')])
+        ..id = 2
+        ..name = 'Drugi';
+      final lines = const LineSplitter().convert(
+        Transect.csvOf([buildTransect(), second]),
+      );
+      expect(lines.length, 4);
+      expect(lines.first, startsWith('Species,Note,'));
+      expect(lines.where((l) => l.startsWith('Species,')).length, 1);
+      expect(lines[3], 'Bufo bufo,,Drugi,1,,');
+
+      /// a single transect exports exactly as before
+      expect(Transect.csvOf([buildTransect()]), buildTransect().toCSV());
+    });
+  });
+
   group('point ids', () {
     test('a new point never reuses the id of one still there', () {
       final transect = buildTransect()
