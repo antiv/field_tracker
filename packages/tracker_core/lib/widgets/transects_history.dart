@@ -179,38 +179,45 @@ class _TransectsHistoryState extends State<TransectsHistory> {
     }
     final picked = _selectedTransects;
     final enabled = picked.isNotEmpty;
-    final kmz = picked.any((t) => t.hasPhotos);
+    final kml = picked.any((t) => t.hasPhotos) ? 'kmz'.tr() : 'kml'.tr();
+
+    /// every export sends one file per transect and format; several files
+    /// go out as one zip
+    Widget export(
+      String label,
+      Future<void> Function(List<Transect>, [Rect?]) share,
+    ) => Expanded(
+      child: Builder(
+        builder: (buttonContext) => ElevatedButton.icon(
+          onPressed: enabled
+              ? () => share(picked, _originOf(buttonContext))
+              : null,
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+          ),
+          icon: const Icon(Icons.share, size: 16),
+          label: FittedBox(child: Text(label)),
+        ),
+      ),
+    );
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
-            child: Builder(
-              builder: (buttonContext) => ElevatedButton.icon(
-                onPressed: enabled
-                    ? () =>
-                          Transect.shareCSVOf(picked, _originOf(buttonContext))
-                    : null,
-                icon: const Icon(Icons.share, size: 18),
-                label: FittedBox(child: Text('csv'.tr())),
-              ),
-            ),
+          Row(
+            children: [
+              export('csv'.tr(), Transect.shareCSVOf),
+              const SizedBox(width: 8),
+              export(kml, Transect.shareKMLOf),
+              const SizedBox(width: 8),
+              export('${'csv'.tr()} + $kml', Transect.shareCSVAndKMLOf),
+            ],
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Builder(
-              builder: (buttonContext) => ElevatedButton.icon(
-                onPressed: enabled
-                    ? () =>
-                          Transect.shareKMLOf(picked, _originOf(buttonContext))
-                    : null,
-                icon: const Icon(Icons.share, size: 18),
-                label: FittedBox(child: Text(kmz ? 'kmz'.tr() : 'kml'.tr())),
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
+          const SizedBox(height: 4),
+          SizedBox(
+            width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: enabled ? () => _delete(picked) : null,
               style: ElevatedButton.styleFrom(
@@ -218,7 +225,7 @@ class _TransectsHistoryState extends State<TransectsHistory> {
                 foregroundColor: Colors.white,
               ),
               icon: const Icon(Icons.delete, size: 18),
-              label: FittedBox(child: Text('delete_selected'.tr())),
+              label: Text('delete_selected'.tr()),
             ),
           ),
         ],

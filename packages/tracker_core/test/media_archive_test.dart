@@ -256,6 +256,17 @@ void main() {
     expect(Placemark.fromJson(json).photos, isEmpty);
   });
 
+  test('zipFiles packs each file at the root under its own name', () async {
+    final a = File(outPath('a.csv'))..writeAsStringSync('x');
+    final b = File(outPath('b.kmz'))..writeAsBytesSync(pixel);
+    final zip = outPath('batch.zip');
+    await zipFiles([a.path, b.path], zip);
+
+    final entries = entriesOf(zip);
+    expect(entries.keys.toSet(), {'a.csv', 'b.kmz'});
+    expect(entries['b.kmz']!.content, pixel);
+  });
+
   test('a legacy point without a photos key restores as an empty list', () {
     final json = buildTransect().markers!.single.toJson();
     for (final record in json['species'] as List<dynamic>) {
