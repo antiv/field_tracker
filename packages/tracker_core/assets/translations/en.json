@@ -85,6 +85,7 @@
   "import_success": "KML imported successfully",
   "invalid_file_format": "Invalid file format",
   "photos": "Photos",
+  "point_photos": "Point photos",
   "add_photo_camera": "Camera",
   "add_photo_gallery": "Gallery",
   "delete_photo": "Remove this photo?",

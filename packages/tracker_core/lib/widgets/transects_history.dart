@@ -244,7 +244,9 @@ class _TransectsHistoryState extends State<TransectsHistory> {
         Expanded(
           child: transects.isNotEmpty
               ? ListView.builder(
-                  shrinkWrap: true,
+                  /// a drag has to reach the sheet even when the list is
+                  /// short, or it can never grow (see showBottomModal)
+                  physics: const AlwaysScrollableScrollPhysics(),
                   itemCount: transects.length,
                   itemBuilder: (BuildContext context, int index) {
                     final transect = transects[index];

@@ -85,6 +85,7 @@
   "import_success": "KML je uspešno uvezen",
   "invalid_file_format": "Neispravan format fajla",
   "photos": "Fotografije",
+  "point_photos": "Fotografije tačke",
   "add_photo_camera": "Kamera",
   "add_photo_gallery": "Galerija",
   "delete_photo": "Ukloniti ovu fotografiju?",
