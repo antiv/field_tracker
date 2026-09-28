@@ -85,6 +85,7 @@
   "import_success": "KML je uspešno uvezen",
   "invalid_file_format": "Neispravan format fajla",
   "photos": "Fotografije",
+  "point_photos": "Fotografije tačke",
   "add_photo_camera": "Kamera",
   "add_photo_gallery": "Galerija",
   "delete_photo": "Ukloniti ovu fotografiju?",
@@ -103,12 +104,19 @@
   "csv_header": {
     "transect": "Transekt",
     "point": "Tačka",
-    "photos": "Fotografije"
+    "photos": "Fotografije",
+    "point_photos": "Fotografije tačke"
   },
   "select_atlas_code": "Izaberi atlas kod",
   "select_code": "Izaberi kod: {}",
   "no_points_save_prompt": "Nema zabeleženih tačaka. Da li želite da sačuvate transekt?",
   "delete_transect_confirm": "Da li ste sigurni da želite da obrišete ovaj transekt?",
+  "select_transects": "Izaberi",
+  "selected_count": "Izabrano: {}",
+  "select_all": "Izaberi sve",
+  "delete_selected": "Obriši",
+  "delete_transects_confirm": "Da li ste sigurni da želite da obrišete izabrane transekte ({})?",
+  "transects_export": "transekti ({})",
   "delete_point_confirm": "Da li ste sigurni da želite da obrišete ovu tačku?",
   "delete_record_confirm": "Da li ste sigurni da želite da obrišete ovaj zapis?",
   "transect_deleted": "Transekt je obrisan",

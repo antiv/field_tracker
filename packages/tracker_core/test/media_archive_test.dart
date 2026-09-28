@@ -232,6 +232,41 @@ void main() {
     expect(transect.photoNames, isEmpty);
   });
 
+  test('point photos count everywhere record photos do', () async {
+    final transect = buildTransect();
+    for (final record in transect.markers!.single.records!) {
+      record.photos = [];
+    }
+    transect.markers!.single.photos = [photoA];
+    expect(transect.hasPhotos, isTrue);
+    expect(transect.photoNames, [photoA]);
+    expect(KMZUtils.availablePhotos(transect), [photoA]);
+
+    final kmz = outPath('point.kmz');
+    await KMZUtils.writeKMZ(transect, kmz, [photoA]);
+    final doc = utf8.decode(entriesOf(kmz)[kKmzDocName]!.content as List<int>);
+    expect(doc, contains('<img src="$kKmzFilesDir/$photoA" width="400"/>'));
+
+    final back = await KMZUtils.readKMZ(kmz, DateTime(2026, 5, 4));
+    expect(back.markers!.single.photos, [photoA]);
+
+    final json = transect.markers!.single.toJson();
+    expect(Placemark.fromJson(json).photos, [photoA]);
+    json.remove('photos');
+    expect(Placemark.fromJson(json).photos, isEmpty);
+  });
+
+  test('zipFiles packs each file at the root under its own name', () async {
+    final a = File(outPath('a.csv'))..writeAsStringSync('x');
+    final b = File(outPath('b.kmz'))..writeAsBytesSync(pixel);
+    final zip = outPath('batch.zip');
+    await zipFiles([a.path, b.path], zip);
+
+    final entries = entriesOf(zip);
+    expect(entries.keys.toSet(), {'a.csv', 'b.kmz'});
+    expect(entries['b.kmz']!.content, pixel);
+  });
+
   test('a legacy point without a photos key restores as an empty list', () {
     final json = buildTransect().markers!.single.toJson();
     for (final record in json['species'] as List<dynamic>) {

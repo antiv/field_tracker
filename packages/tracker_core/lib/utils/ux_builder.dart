@@ -38,6 +38,19 @@ Map<String, String> get appArgs => {'app': TrackerConfig.current.appTitle};
 //         ),
 //       ],
 //     ));
+const double _sheetInitial = 0.56;
+const double _sheetMax = 0.92;
+
+/// A sheet that opens at the height the fixed 9/16 sheet used to have and
+/// grows to [_sheetMax] as its list is pushed up: every sheet here is a
+/// header, one list and a row of buttons, and a list of points or transects
+/// soon outgrows the fixed height.
+///
+/// The sheet resizes through its scroll controller, handed down as the
+/// [PrimaryScrollController]: the sheet's one vertical list inherits it on its
+/// own and must not set a controller. A list that may be shorter than the
+/// sheet needs [AlwaysScrollableScrollPhysics], or Android's clamping physics
+/// ignores the drag and the sheet can never grow.
 void showBottomModal(Widget widget) {
   showModalBottomSheet(
     context: ContextHolder.currentContext,
@@ -45,8 +58,22 @@ void showBottomModal(Widget widget) {
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
     showDragHandle: true,
+    useSafeArea: true,
+    isScrollControlled: true,
     builder: (BuildContext context) {
-      return widget;
+      return DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: _sheetInitial,
+        minChildSize: _sheetInitial,
+        maxChildSize: _sheetMax,
+        builder: (context, controller) => PrimaryScrollController(
+          controller: controller,
+
+          /// Android 15 draws edge to edge: without the bottom inset the
+          /// sheet's buttons end up under the navigation bar
+          child: SafeArea(top: false, child: widget),
+        ),
+      );
     },
   );
 }
@@ -229,7 +256,10 @@ void showFullScreenDialog(Widget widget, {String? title}) {
             icon: const Icon(Icons.close),
           ),
         ),
-        body: widget,
+
+        /// the AppBar takes the top inset; the form's buttons at the bottom
+        /// must stay clear of the navigation bar
+        body: SafeArea(top: false, child: widget),
       );
     },
   );

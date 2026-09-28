@@ -133,6 +133,10 @@ class KMLUtils {
                 _data(builder, '$prefix${'csv_header.photos'.tr()}',
                     records[i].photos.join('; '));
               }
+              if (marker.photos.isNotEmpty) {
+                _data(builder, 'csv_header.point_photos'.tr(),
+                    marker.photos.join('; '));
+              }
 
               /// The rows above are for humans and lose the enum names and
               /// the exact timestamps; re-import reads this payload instead,
@@ -148,6 +152,7 @@ class KMLUtils {
                   'accuracy': marker.accuracy,
                   'species':
                       marker.records?.map((s) => s.toJson()).toList() ?? [],
+                  'photos': marker.photos,
                 }));
               });
             });
@@ -232,7 +237,8 @@ class KMLUtils {
           ..description = 'Point ${markers.length + 1}'
           ..records = record == null
               ? _recordsFromDescription(placemark)
-              : Placemark.recordsFromJson(record['species']));
+              : Placemark.recordsFromJson(record['species'])
+          ..photos = Placemark.photosFromJson(record?['photos']));
       }
       /// Find path
       final lineString = placemark.findElements('LineString');
@@ -272,6 +278,9 @@ class KMLUtils {
   /// in the balloon. `files/` is the KMZ convention for bundled resources.
   static String _htmlDescription(Placemark marker, Set<String> bundled) {
     final sb = StringBuffer();
+    for (final photo in marker.photos.where(bundled.contains)) {
+      sb.write('<img src="$kKmzFilesDir/${_escape(photo)}" width="400"/><br/>');
+    }
     for (final record in marker.records ?? <TrackerRecord>[]) {
       sb.write('<p><b>${_escape(record.species)}</b><br/>');
       sb.write(_escape(record.summary));

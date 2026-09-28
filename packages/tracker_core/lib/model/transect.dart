@@ -55,6 +55,14 @@ class Transect {
             .toList() ??
         [];
 
+  /// Id for a new point: one past the highest in use. The count of points
+  /// would hand out an id that is still taken as soon as a point had been
+  /// deleted, and two map markers with one id show as one.
+  int get nextMarkerId => (markers ?? const <Placemark>[]).fold<int>(
+    0,
+    (next, m) => m.id != null && m.id! >= next ? m.id! + 1 : next,
+  );
+
   void addMarker(Placemark marker) {
     markers?.add(marker);
   }
@@ -135,6 +143,7 @@ class Transect {
         'csv_header.transect'.tr(),
         'csv_header.point'.tr(),
         'csv_header.photos'.tr(),
+        'csv_header.point_photos'.tr(),
       ].map(csvCell).join(','),
     );
     for (final point in markers ?? const <Placemark>[]) {
@@ -145,6 +154,7 @@ class Transect {
             name ?? '',
             '${(point.id ?? 0) + 1}',
             record.photos.join('; '),
+            point.photos.join('; '),
           ].map(csvCell).join(','),
         );
       }
@@ -166,18 +176,20 @@ class Transect {
     return KMLUtils.generateKML(this);
   }
 
-  /// Photo file names of every record in the transect.
+  /// Photo file names of every point and record in the transect.
   List<String> get photoNames => [
     for (final marker in markers ?? <Placemark>[]) ...marker.photoNames,
   ];
 
-  /// True when any record names a photo. Deliberately reads nothing off the
+  /// True when any point or record names a photo. Deliberately reads nothing off the
   /// disk — the history list calls this from its item builder on every frame.
   /// The export checks what is actually there, once, in [shareKML].
   bool get hasPhotos =>
       markers?.any(
         (marker) =>
-            marker.records?.any((record) => record.photos.isNotEmpty) ?? false,
+            marker.photos.isNotEmpty ||
+            (marker.records?.any((record) => record.photos.isNotEmpty) ??
+                false),
       ) ??
       false;
 
@@ -194,51 +206,167 @@ class Transect {
   );
 
   /// share transect as CSV file
-  Future<void> shareCSV([Rect? sharePositionOrigin]) async {
-    /// UTF-8 with BOM — species names and notes carry č/ć/š/ž/đ and Excel
-    /// needs the BOM to pick the right encoding
-    Uint8List bytes = Uint8List.fromList([
-      0xEF,
-      0xBB,
-      0xBF,
-      ...utf8.encode(toCSV()),
-    ]);
-    String path = await storeFileTemporarily(bytes, '$_exportFileBase.csv');
-    await SharePlus.instance.share(
-      ShareParams(
-        files: [XFile(path)],
-        text: _exportLabel,
-        subject: _exportLabel,
-        sharePositionOrigin: sharePositionOrigin,
-      ),
+  Future<void> shareCSV([Rect? sharePositionOrigin]) =>
+      shareCSVOf([this], sharePositionOrigin);
+
+  /// One CSV per transect; several go out zipped together.
+  static Future<void> shareCSVOf(
+    List<Transect> transects, [
+    Rect? sharePositionOrigin,
+  ]) async {
+    if (transects.isEmpty) return;
+    final paths = await _writeCSVFiles(transects, _uniqueFileBases(transects));
+    await _shareFiles(
+      transects,
+      paths,
+      singleLabel: transects.first._exportLabel,
+      zipKind: 'csv',
+      sharePositionOrigin: sharePositionOrigin,
     );
   }
 
   /// Share the transect as KML, or as KMZ when there are photos to embed —
-  /// a plain KML could only name them. This is the one place that asks the
-  /// disk which of the named photos still exist.
-  Future<void> shareKML([Rect? sharePositionOrigin]) async {
-    final photos = hasPhotos ? KMZUtils.availablePhotos(this) : <String>[];
-    final label = photos.isEmpty ? 'KML' : 'KMZ';
-    final String path = await temporaryFilePath(
-      '$_exportFileBase.${label.toLowerCase()}',
+  /// a plain KML could only name them.
+  Future<void> shareKML([Rect? sharePositionOrigin]) =>
+      shareKMLOf([this], sharePositionOrigin);
+
+  /// One KML/KMZ per transect — an import reads a file as one transect —
+  /// and several go out zipped together.
+  static Future<void> shareKMLOf(
+    List<Transect> transects, [
+    Rect? sharePositionOrigin,
+  ]) async {
+    if (transects.isEmpty) return;
+    final (paths, anyKmz) = await _writeKMLFiles(
+      transects,
+      _uniqueFileBases(transects),
     );
+    await _shareFiles(
+      transects,
+      paths,
+      singleLabel: '${transects.first._exportLabel} ${anyKmz ? 'KMZ' : 'KML'}',
+      zipKind: 'kml',
+      sharePositionOrigin: sharePositionOrigin,
+    );
+  }
 
-    if (photos.isEmpty) {
-      await File(path).writeAsBytes(utf8.encode(toKML()), flush: true);
-    } else {
-      await KMZUtils.writeKMZ(this, path, photos);
+  /// Both formats, every file on its own — a CSV and a KML/KMZ per
+  /// transect — in one zip.
+  static Future<void> shareCSVAndKMLOf(
+    List<Transect> transects, [
+    Rect? sharePositionOrigin,
+  ]) async {
+    if (transects.isEmpty) return;
+    final bases = _uniqueFileBases(transects);
+    final csv = await _writeCSVFiles(transects, bases);
+    final (kml, _) = await _writeKMLFiles(transects, bases);
+    await _shareFiles(
+      transects,
+      [...csv, ...kml],
+      singleLabel: transects.first._exportLabel,
+      zipKind: 'csv-kml',
+      sharePositionOrigin: sharePositionOrigin,
+    );
+  }
+
+  static Future<List<String>> _writeCSVFiles(
+    List<Transect> transects,
+    List<String> bases,
+  ) async => [
+    for (var i = 0; i < transects.length; i++)
+      /// UTF-8 with BOM — species names and notes carry č/ć/š/ž/đ and
+      /// Excel needs the BOM to pick the right encoding
+      await storeFileTemporarily(
+        Uint8List.fromList([
+          0xEF,
+          0xBB,
+          0xBF,
+          ...utf8.encode(transects[i].toCSV()),
+        ]),
+        '${bases[i]}.csv',
+      ),
+  ];
+
+  static Future<(List<String>, bool)> _writeKMLFiles(
+    List<Transect> transects,
+    List<String> bases,
+  ) async {
+    final paths = <String>[];
+    var anyKmz = false;
+    for (var i = 0; i < transects.length; i++) {
+      final (path, isKmz) = await transects[i]._writeKMLFile(bases[i]);
+      anyKmz |= isKmz;
+      paths.add(path);
     }
+    return (paths, anyKmz);
+  }
 
+  /// One file is shared as it is; several are packed into one zip, which
+  /// every share target accepts and which keeps the files together.
+  static Future<void> _shareFiles(
+    List<Transect> transects,
+    List<String> paths, {
+    required String singleLabel,
+    required String zipKind,
+    Rect? sharePositionOrigin,
+  }) async {
+    final single = transects.length == 1 ? transects.single : null;
+    String path = paths.first;
+    String label = single != null ? singleLabel : _multiExportLabel(transects);
+    if (paths.length > 1) {
+      final base = single?._exportFileBase ?? _multiExportFileBase(transects);
+      path = await temporaryFilePath('$base-$zipKind.zip');
+      await zipFiles(paths, path);
+    }
     await SharePlus.instance.share(
       ShareParams(
         files: [XFile(path)],
-        text: '$_exportLabel $label',
-        subject: '$_exportLabel $label',
+        text: label,
+        subject: label,
         sharePositionOrigin: sharePositionOrigin,
       ),
     );
   }
+
+  /// Two transects with the same name on the same day would otherwise
+  /// write over each other's file — the later one gets its id appended.
+  static List<String> _uniqueFileBases(List<Transect> transects) {
+    final used = <String>{};
+    return [
+      for (final t in transects)
+        used.add(t._exportFileBase)
+            ? t._exportFileBase
+            : '${t._exportFileBase}-${t.id}',
+    ];
+  }
+
+  /// Writes the transect as `<base>.kml`, or `<base>.kmz` when there are
+  /// photos on disk to embed. This is the one place that asks the disk which
+  /// of the named photos still exist.
+  Future<(String, bool)> _writeKMLFile(String base) async {
+    final photos = hasPhotos ? KMZUtils.availablePhotos(this) : <String>[];
+    final isKmz = photos.isNotEmpty;
+    final String path = await temporaryFilePath(
+      '$base.${isKmz ? 'kmz' : 'kml'}',
+    );
+    if (isKmz) {
+      await KMZUtils.writeKMZ(this, path, photos);
+    } else {
+      await File(path).writeAsBytes(utf8.encode(toKML()), flush: true);
+    }
+    return (path, isKmz);
+  }
+
+  static String _multiExportLabel(List<Transect> transects) => sanitizeFileName(
+    '${TrackerConfig.current.appTitle} '
+    '${'transects_export'.tr(args: ['${transects.length}'])}',
+  );
+
+  static String _multiExportFileBase(List<Transect> transects) =>
+      sanitizeFileName(
+        '${TrackerConfig.current.appTitle}-${transects.length}-'
+        '${DateFormat('dd-MM-yyyy').format(DateTime.now())}',
+      );
 
   void goToFirst() {
     final first =

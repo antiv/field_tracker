@@ -61,8 +61,10 @@ class _TransectInfoState extends State<TransectInfo> {
           ),
           const Divider(height: 16),
           Expanded(
-            // height: 340,
             child: ListView.builder(
+              /// a drag has to reach the sheet even when the list is short,
+              /// or it can never grow (see showBottomModal)
+              physics: const AlwaysScrollableScrollPhysics(),
               itemCount: current?.markers?.length ?? 0,
               itemBuilder: (context, index) {
                 return Card(

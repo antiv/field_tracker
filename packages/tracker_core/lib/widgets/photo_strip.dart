@@ -10,10 +10,18 @@ import '../utils/ux_builder.dart';
 /// column that already overflows in Serbian on a small phone, so this must
 /// never grow with the number of photos.
 class PhotoStrip extends StatefulWidget {
-  const PhotoStrip({super.key, required this.names, required this.onChanged});
+  const PhotoStrip({
+    super.key,
+    required this.names,
+    required this.onChanged,
+    this.label,
+  });
 
   final List<String> names;
   final ValueChanged<List<String>> onChanged;
+
+  /// the caption above the strip; "Photos" when null
+  final String? label;
 
   @override
   State<PhotoStrip> createState() => _PhotoStripState();
@@ -142,7 +150,7 @@ class _PhotoStripState extends State<PhotoStrip> {
       children: [
         Row(
           children: [
-            Text('photos'.tr(),
+            Text(widget.label ?? 'photos'.tr(),
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant)),
             if (_busy) ...[

@@ -228,13 +228,13 @@ void main() {
 
     /// the bird columns keep their order and English headers — the sheets
     /// built on this export expect them — and the shared transect, point
-    /// and photo columns follow; a photo name with a comma is quoted
+    /// and photo columns (the record's, then the point's) follow; a photo name with a comma is quoted
     expect(lines[1],
-        endsWith(',G,NNE,12,Test transekt,1,"$photo; weird, name.jpg"'));
+        endsWith(',G,NNE,12,Test transekt,1,"$photo; weird, name.jpg",'));
 
     /// a record with only the required fields must still line up
     expect(lines[2], contains('Sitta europaea'));
-    expect(lines[2], endsWith(',,,,Test transekt,1,'));
+    expect(lines[2], endsWith(',,,,Test transekt,1,,'));
   });
 
   testWidgets('the share button labels are plain keys, not blocks',
