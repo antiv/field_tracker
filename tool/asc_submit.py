@@ -6,15 +6,17 @@ The App Store counterpart of play_promote.py: the build deploy_ios.sh uploaded
 review — through the App Store Connect API, with the same API key.
 
     asc_submit.py <bundle id> <X.Y.Z> <build number>
-                  [--notes en-US="..." --notes sr="..."] [--manual-release] [--dry-run]
+                  [--notes en="..." --notes sr="..."] [--notes-file notes.json]
+                  [--manual-release] [--dry-run]
 
 Steps: find the build and check Apple finished processing it; reuse the App
 Store version that is still editable (renamed to X.Y.Z) or create it; attach
 the build; set "What's New" on every localization of the version; submit.
---notes keys are App Store locales (en-US, de-DE, ...); a localization with no
-note of its own gets en-US. Without --notes the existing text is kept, which
-Apple refuses to submit empty for an update. The version goes live as soon as
-it is approved, or waits for "Release" in App Store Connect with --manual-release.
+--notes / --notes-file give the text by language and release_notes.py matches
+it to each localization (a new version has those of the latest one), English
+as the fallback. What's New is planned and checked before anything changes:
+Apple refuses an update with an empty one. The version goes live as soon as it
+is approved, or waits for "Release" in App Store Connect with --manual-release.
 --dry-run only reads and prints the plan.
 
 Credentials from the app's ios/deploy.env: ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_PATH
@@ -30,6 +32,8 @@ import time
 
 import jwt
 import requests
+
+import release_notes
 
 API = "https://api.appstoreconnect.apple.com/v1"
 
@@ -74,22 +78,13 @@ class Api:
         return self.call("PATCH", path, json={"data": data})
 
 
-def parse_notes(pairs):
-    notes = {}
-    for pair in pairs or []:
-        locale, sep, text = pair.partition("=")
-        if not sep or not locale or not text:
-            fail(f"--notes expects LOCALE=TEXT, got: {pair}")
-        notes[locale] = text
-    return notes
-
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("bundle_id", help="e.g. rs.antonijevic.birdTracker")
     parser.add_argument("version", help="App Store version string, X.Y.Z")
     parser.add_argument("build", help="build number (the +N of pubspec)")
-    parser.add_argument("--notes", action="append", metavar="LOCALE=TEXT", help="What's New, repeatable")
+    parser.add_argument("--notes", action="append", metavar="LANG=TEXT", help="What's New, repeatable")
+    parser.add_argument("--notes-file", help="What's New as JSON: {\"en\": \"...\", \"de\": \"...\"}")
     parser.add_argument("--manual-release", action="store_true", help="wait for a manual release after approval")
     parser.add_argument("--dry-run", action="store_true", help="read only, print the plan")
     args = parser.parse_args()
@@ -99,7 +94,7 @@ def main():
             fail(f"{var} is not set (source the app's ios/deploy.env)")
     if not os.path.isfile(os.environ["ASC_KEY_PATH"]):
         fail(f"API key not found: {os.environ['ASC_KEY_PATH']}")
-    notes = parse_notes(args.notes)
+    notes = release_notes.load(args.notes, args.notes_file, fail)
     api = Api(os.environ["ASC_KEY_ID"], os.environ["ASC_ISSUER_ID"], os.environ["ASC_KEY_PATH"])
     dry = "(dry run) " if args.dry_run else ""
 
@@ -129,10 +124,25 @@ def main():
     first_release = not any(v["attributes"]["appStoreState"] == "READY_FOR_SALE" for v in versions)
     release_type = "MANUAL" if args.manual_release else "AFTER_APPROVAL"
 
-    # a new version starts with an empty What's New, which Apple refuses for an
-    # update — fail here, before anything in App Store Connect has changed
-    if editable is None and not first_release and not notes:
-        fail(f"version {args.version} is new and needs What's New: pass --notes en-US=...")
+    # What's New is planned, and checked, before anything in App Store Connect
+    # changes. It is not allowed on an app's first version and required on every
+    # later one; a new version copies its localizations from the latest one.
+    whats_new = {}
+    if first_release:
+        print("    first release of the app: no What's New")
+    else:
+        source = editable or versions[0]
+        for loc in api.get(f"/appStoreVersions/{source['id']}/appStoreVersionLocalizations")["data"]:
+            locale = loc["attributes"]["locale"]
+            text, used = release_notes.match(notes, locale)
+            if text is not None:
+                whats_new[locale] = text
+                print(f"    {dry}What's New [{locale}] ← {used}: {release_notes.preview(text)}")
+            elif editable is not None and loc["attributes"].get("whatsNew"):
+                print(f"    What's New [{locale}]: kept")
+            else:
+                fail(f"What's New is missing for {locale}: pass --notes en=... "
+                     f"(or {locale.split('-')[0].lower()}=...)")
 
     if editable is None:
         print(f"    {dry}create version {args.version}")
@@ -157,27 +167,18 @@ def main():
         api.patch(f"/appStoreVersions/{version['id']}/relationships/build",
                   {"type": "builds", "id": build["id"]})
 
-    # What's New: not allowed on an app's first version, required on every later one
-    if first_release:
-        print("    first release of the app: no What's New")
-    elif version is None:
-        print(f"    {dry}What's New: {', '.join(notes) or 'none given — Apple refuses an update without it'}")
-    else:
-        localizations = api.get(f"/appStoreVersions/{version['id']}/appStoreVersionLocalizations")["data"]
-        for loc in localizations:
+    if not first_release and version is not None and not args.dry_run:
+        for loc in api.get(f"/appStoreVersions/{version['id']}/appStoreVersionLocalizations")["data"]:
             locale = loc["attributes"]["locale"]
-            text = notes.get(locale) or notes.get(locale.split("-")[0]) or notes.get("en-US") or notes.get("en")
+            text = whats_new.get(locale) or release_notes.match(notes, locale)[0]
             if text:
-                print(f"    {dry}What's New [{locale}]: {text[:60]}{'…' if len(text) > 60 else ''}")
-                if not args.dry_run:
-                    api.patch(f"/appStoreVersionLocalizations/{loc['id']}", {
-                        "type": "appStoreVersionLocalizations", "id": loc["id"],
-                        "attributes": {"whatsNew": text},
-                    })
-            elif loc["attributes"].get("whatsNew"):
-                print(f"    What's New [{locale}]: kept")
-            else:
-                fail(f"What's New is empty for {locale}: pass --notes {locale}=... (or en-US=...)")
+                api.patch(f"/appStoreVersionLocalizations/{loc['id']}", {
+                    "type": "appStoreVersionLocalizations", "id": loc["id"],
+                    "attributes": {"whatsNew": text},
+                })
+            elif not loc["attributes"].get("whatsNew"):
+                fail(f"What's New is missing for {locale} — the version is prepared but not submitted; "
+                     f"rerun with --notes {locale.split('-')[0].lower()}=...")
 
     if args.dry_run:
         print("✓ dry run: nothing was changed; without --dry-run the version is submitted for review")

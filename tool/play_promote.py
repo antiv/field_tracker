@@ -6,12 +6,14 @@ code that tested fine on the internal track is put on production as is — one
 Play Developer API edit: open, read the source track, update the target, commit.
 
     play_promote.py <package> <versionCode> [--from internal] [--to production]
-                    [--rollout 0.2] [--notes en-US="..." --notes sr="..."]
+                    [--rollout 0.2] [--notes en="..." --notes sr="..."] [--notes-file notes.json]
                     [--key sa.json] [--dry-run]
 
 --rollout below 1 is a staged rollout (status inProgress); omitted, the release
-goes to everyone. --notes sets "What's new" per Play language code; without it
-the notes the release already has on the source track are carried over.
+goes to everyone. --notes / --notes-file set "What's new" by language (see
+release_notes.py): every language of the app's store listing gets its note, or
+the English one as a fallback; without notes, the ones the release already has
+on the source track are carried over.
 --dry-run opens the edit, applies it, has Play validate it and throws it away.
 
 The service account needs "Release apps to production" in Play Console →
@@ -30,6 +32,8 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
+import release_notes
+
 SCOPES = ["https://www.googleapis.com/auth/androidpublisher"]
 
 
@@ -45,16 +49,6 @@ def api_message(error):
         return str(error)
 
 
-def parse_notes(pairs):
-    notes = []
-    for pair in pairs or []:
-        language, sep, text = pair.partition("=")
-        if not sep or not language or not text:
-            fail(f"--notes expects LANG=TEXT, got: {pair}")
-        notes.append({"language": language, "text": text})
-    return notes
-
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("package", help="applicationId, e.g. rs.antonijevic.bird_tracker")
@@ -63,6 +57,7 @@ def main():
     parser.add_argument("--to", dest="target", default="production", help="target track (default: production)")
     parser.add_argument("--rollout", type=float, help="staged rollout fraction, 0 < f < 1")
     parser.add_argument("--notes", action="append", metavar="LANG=TEXT", help="release notes, repeatable")
+    parser.add_argument("--notes-file", help="release notes as JSON: {\"en\": \"...\", \"de\": \"...\"}")
     parser.add_argument("--key", default=os.environ.get("PLAY_SERVICE_ACCOUNT_JSON"),
                         help="service account JSON key (default: $PLAY_SERVICE_ACCOUNT_JSON)")
     parser.add_argument("--dry-run", action="store_true", help="validate the edit, then discard it")
@@ -72,7 +67,7 @@ def main():
         fail(f"service account key not found: {args.key}")
     if args.rollout is not None and not 0 < args.rollout < 1:
         fail("--rollout must be between 0 and 1 (omit it for a full release)")
-    notes = parse_notes(args.notes)
+    notes = release_notes.load(args.notes, args.notes_file, fail)
     code = str(args.version_code)
     package = args.package
 
@@ -94,8 +89,30 @@ def main():
                 target_release["name"] = release["name"]
             if args.rollout is not None:
                 target_release.update(status="inProgress", userFraction=args.rollout)
-            if notes or release.get("releaseNotes"):
-                target_release["releaseNotes"] = notes or release["releaseNotes"]
+            if notes:
+                listings = edits.listings().list(packageName=package, editId=edit_id).execute()
+                target_release["releaseNotes"] = []
+                for language in [l["language"] for l in listings.get("listings", [])]:
+                    text, used = release_notes.match(notes, language)
+                    if text is None:
+                        print(f"    notes [{language}]: none — no {language} or English note given")
+                        continue
+                    print(f"    notes [{language}] ← {used}: {release_notes.preview(text)}")
+                    target_release["releaseNotes"].append({"language": language, "text": text})
+
+                # Play shows release notes in the device language even with no store
+                # listing in it (Serbian notes on an English-only listing), so a note
+                # no listing took goes out under Play's code for its language
+                covered = {n["language"].split("-")[0].lower() for n in target_release["releaseNotes"]}
+                for key, text in notes.items():
+                    language = release_notes.play_language(key)
+                    if language.split("-")[0].lower() in covered:
+                        continue
+                    covered.add(language.split("-")[0].lower())
+                    print(f"    notes [{language}] ← {key} (no listing in it): {release_notes.preview(text)}")
+                    target_release["releaseNotes"].append({"language": language, "text": text})
+            elif release.get("releaseNotes"):
+                target_release["releaseNotes"] = release["releaseNotes"]
 
             edits.tracks().update(
                 packageName=package, editId=edit_id, track=args.target,

@@ -1,41 +1,52 @@
 #!/bin/bash
 #
-# promote.sh — put the tested release of one app into production on both stores.
+# promote.sh — put the tested release of an app into production on both stores.
 #
-#   tool/promote.sh <app> --dry-run                       # check both stores, change nothing
-#   tool/promote.sh <app> --notes-en "..." --notes-sr "..."
+#   tool/promote.sh [<app>] --dry-run --notes-file notes.json   # check both stores, change nothing
+#   tool/promote.sh [<app>] --notes en="..." --notes sr="..."
 #
-#   <app>                bird_tracker | herp_tracker | ciconia_tracker
-#   --android | --ios    only one store (default: both)
-#   --rollout F          Play staged rollout, 0 < F < 1 (default: everyone)
-#   --manual-release     App Store: wait for "Release" after approval (default: live on approval)
-#   --notes-en / --notes-sr   What's New; Play en-US / sr, App Store en-US / hr
+#   <app>                 in a workspace, the directory under apps/ (bird_tracker, ...);
+#                         left out in a single-app repo
+#   --notes LANG=TEXT     What's New for one language (en, sr, de, es, ...) or locale
+#                         (es-419); repeatable. --notes-en / --notes-sr are shorthands
+#   --notes-file F        the same as JSON: {"en": "...", "de": "..."}
+#   --android | --ios     only one store (default: both)
+#   --rollout F           Play staged rollout, 0 < F < 1 (default: everyone)
+#   --manual-release      App Store: wait for "Release" after approval (default: live on approval)
 #
-# The version is the one in apps/<app>/pubspec.yaml (X.Y.Z+N) — the one the last
-# build_release.sh --bump / deploy_ios.sh --no-bump pair uploaded. Android: the
-# versionCode N moves from the internal track to production (tool/play_promote.py).
-# iOS: build N becomes App Store version X.Y.Z and is submitted for review
-# (tool/asc_submit.py). Both stores review before the release is live.
+# The version is the one in the app's pubspec.yaml (X.Y.Z+N) — the build the last
+# Android upload with the bump and iOS upload without it sent to the internal
+# track / TestFlight. Android: versionCode N moves to production
+# (tool/play_promote.py). iOS: build N becomes App Store version X.Y.Z and is
+# submitted for review (tool/asc_submit.py). Each store listing language gets
+# the note for its language, or the English one (tool/release_notes.py); the
+# output lists which note every language got. Both stores review the release
+# before it is live.
 #
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-APP="${1:-}"
-[[ -n "$APP" && "$APP" != -* ]] || { sed -n '5,13p' "$0" | sed 's/^#[[:space:]]\{0,1\}//'; exit 64; }
-shift
-DIR="$ROOT/apps/$APP"
-[[ -d "$DIR" ]] || { echo "No app at $DIR" >&2; exit 1; }
+TOOL="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(dirname "$TOOL")"
+if [[ $# -gt 0 && "$1" != -* && -d "$ROOT/apps/$1" ]]; then
+  DIR="$ROOT/apps/$1"; shift
+elif [[ -f "$ROOT/pubspec.yaml" && -d "$ROOT/android" ]]; then
+  DIR="$ROOT"
+else
+  sed -n '5,17p' "$0" | sed 's/^#[[:space:]]\{0,1\}//'; exit 64
+fi
 
-ANDROID=true; IOS=true; DRY=(); ROLLOUT=(); MANUAL=(); NOTES_EN=""; NOTES_SR=""
+ANDROID=true; IOS=true; OPTS=(); PLAY_OPTS=(); ASC_OPTS=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --android)        IOS=false ;;
     --ios)            ANDROID=false ;;
-    --dry-run)        DRY=(--dry-run) ;;
-    --rollout)        ROLLOUT=(--rollout "$2"); shift ;;
-    --manual-release) MANUAL=(--manual-release) ;;
-    --notes-en)       NOTES_EN="$2"; shift ;;
-    --notes-sr)       NOTES_SR="$2"; shift ;;
+    --dry-run)        OPTS+=(--dry-run) ;;
+    --notes)          OPTS+=(--notes "$2"); shift ;;
+    --notes-en)       OPTS+=(--notes "en=$2"); shift ;;
+    --notes-sr)       OPTS+=(--notes "sr=$2"); shift ;;
+    --notes-file)     OPTS+=(--notes-file "$(cd "$(dirname "$2")" && pwd)/$(basename "$2")"); shift ;;
+    --rollout)        PLAY_OPTS+=(--rollout "$2"); shift ;;
+    --manual-release) ASC_OPTS+=(--manual-release) ;;
     *) echo "Unknown argument: $1" >&2; exit 64 ;;
   esac
   shift
@@ -44,31 +55,23 @@ done
 version="$(grep -m1 -E '^version:' "$DIR/pubspec.yaml" | sed -E 's/^version:[[:space:]]*//' | tr -d '[:space:]')"
 name="${version%%+*}"; code="${version#*+}"
 [[ "$code" != "$version" ]] || { echo "No +build in version '$version'" >&2; exit 1; }
-echo "== $APP $name ($code)"
+echo "== $(basename "$DIR") $name ($code)"
 
 if $ANDROID; then
-  package="$(grep -m1 -oE 'applicationId = "[^"]+"' "$DIR/android/app/build.gradle.kts" | cut -d'"' -f2)"
+  package="$(grep -h -m1 -oE 'applicationId *=? *"[^"]+"' "$DIR"/android/app/build.gradle* | cut -d'"' -f2)"
   # shellcheck disable=SC1091
   source "$DIR/android/deploy.env"
-  notes=()
-  [[ -n "$NOTES_EN" ]] && notes+=(--notes "en-US=$NOTES_EN")
-  [[ -n "$NOTES_SR" ]] && notes+=(--notes "sr=$NOTES_SR")
   echo "-- Google Play"
-  PLAY_SERVICE_ACCOUNT_JSON="$PLAY_SERVICE_ACCOUNT_JSON" python3 "$ROOT/tool/play_promote.py" \
-    "$package" "$code" ${ROLLOUT[@]+"${ROLLOUT[@]}"} ${notes[@]+"${notes[@]}"} ${DRY[@]+"${DRY[@]}"}
+  PLAY_SERVICE_ACCOUNT_JSON="$PLAY_SERVICE_ACCOUNT_JSON" python3 -u "$TOOL/play_promote.py" \
+    "$package" "$code" ${PLAY_OPTS[@]+"${PLAY_OPTS[@]}"} ${OPTS[@]+"${OPTS[@]}"}
 fi
 
 if $IOS; then
-  bundle="$(grep -m1 -oE 'PRODUCT_BUNDLE_IDENTIFIER = rs\.antonijevic\.[A-Za-z]+;' \
-    "$DIR/ios/Runner.xcodeproj/project.pbxproj" | sed -E 's/.* = (.*);/\1/')"
+  bundle="$(grep -oE 'PRODUCT_BUNDLE_IDENTIFIER = [A-Za-z0-9_.-]+;' \
+    "$DIR/ios/Runner.xcodeproj/project.pbxproj" | grep -v RunnerTests | head -1 | sed -E 's/.* = (.*);/\1/')"
   # shellcheck disable=SC1091
   source "$DIR/ios/deploy.env"
-  notes=()
-  [[ -n "$NOTES_EN" ]] && notes+=(--notes "en-US=$NOTES_EN")
-  # the App Store has no Serbian; a listing in Croatian stands in for it
-  [[ -n "$NOTES_SR" ]] && notes+=(--notes "hr=$NOTES_SR")
   echo "-- App Store"
   ASC_KEY_ID="$ASC_KEY_ID" ASC_ISSUER_ID="$ASC_ISSUER_ID" ASC_KEY_PATH="$ASC_KEY_PATH" \
-    python3 "$ROOT/tool/asc_submit.py" "$bundle" "$name" "$code" \
-    ${MANUAL[@]+"${MANUAL[@]}"} ${notes[@]+"${notes[@]}"} ${DRY[@]+"${DRY[@]}"}
+    python3 -u "$TOOL/asc_submit.py" "$bundle" "$name" "$code" ${ASC_OPTS[@]+"${ASC_OPTS[@]}"} ${OPTS[@]+"${OPTS[@]}"}
 fi
