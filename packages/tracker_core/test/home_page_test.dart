@@ -12,8 +12,9 @@ import 'package:tracker_core/tracker_core.dart';
 import 'test_config.dart';
 
 /// The location and maps plugins have no implementation under the test
-/// binding, so nothing can start recording here — which is exactly the
-/// state this file is about: the map up, no transect.
+/// binding — setUpAll stubs their channels, with the location service off —
+/// so nothing can start recording here, which is exactly the state this file
+/// is about: the map up, no transect.
 Future<void> pumpHome(WidgetTester tester) async {
   await tester.runAsync(() async {
     /// .value, not create: DataService is a singleton, and a provider that
@@ -61,6 +62,14 @@ void main() {
           MethodChannel('plugins.flutter.io/google_maps_$id'),
           (call) async => null);
     }
+
+    /// The startup centering runs the permission gate, and an unanswered
+    /// `serviceEnabled` threw a MissingPluginException from a future nobody
+    /// awaits — whether it landed inside the test or after it was down to
+    /// the machine's timing, and on CI it failed a finished test. The
+    /// location service is off and stays off, so the gate returns false.
+    messenger.setMockMethodCallHandler(
+        const MethodChannel('lyokone/location'), (call) async => 0);
   });
 
   tearDownAll(() async {
