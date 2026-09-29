@@ -65,8 +65,12 @@ void main() {
     expect(find.text('Count'), findsOneWidget);
     expect(find.text('Behavior'), findsOneWidget);
     expect(find.text('Select atlas code'), findsOneWidget);
-    expect(find.text('Direction:'), findsOneWidget);
+    expect(find.text('Flight direction:'), findsOneWidget);
     expect(find.text('Strat.:'), findsOneWidget);
+
+    /// how far and which way from the point — not the flight direction
+    expect(find.text('Distance (m)'), findsOneWidget);
+    expect(find.text('Direction'), findsOneWidget);
 
     expect(find.text('Photos'), findsOneWidget);
     expect(find.text('Camera'), findsOneWidget);
@@ -96,6 +100,8 @@ void main() {
     expect(saved!.species, 'Parus major');
     expect(saved!.count, 1);
     expect(saved!.photos, isEmpty);
+    expect(saved!.distance, isNull);
+    expect(saved!.sightingDirection, isNull);
 
     /// hh:mm:ss stamped at save time, not entered by the surveyor
     expect(saved!.time, matches(RegExp(r'^\d{2}:\d{2}:\d{2}$')));
@@ -113,6 +119,9 @@ void main() {
     expect(find.text('Vrsta'), findsOneWidget);
     expect(find.text('Izaberi atlas kod'), findsOneWidget);
     expect(find.text('Ponašanje'), findsOneWidget);
+    expect(find.text('Pravac leta:'), findsOneWidget);
+    expect(find.text('Udaljenost (m)'), findsOneWidget);
+    expect(find.text('Pravac'), findsOneWidget);
 
     /// the photo strip carries the longest Serbian button labels
     expect(find.text('Fotografije'), findsOneWidget);
@@ -177,5 +186,47 @@ void main() {
 
     /// the atlas code the record already carries shows on the button
     expect(find.textContaining('12'), findsWidgets);
+  });
+
+  Future<BirdRecord?> saveWithDistance(WidgetTester tester,
+      {required String typed, String? picked}) async {
+    BirdRecord? saved;
+    await pumpForm(
+        tester,
+        RecordFormShell(
+            onSaved: (record, close) => saved = record as BirdRecord));
+
+    await tester.enterText(find.byType(EditableText).first, 'Parus major');
+    await tester.enterText(find.byKey(const ValueKey('distance')), typed);
+    await tester.pumpAndSettle();
+
+    if (picked != null) {
+      final menu = find.descendant(
+          of: find.byKey(const ValueKey('distance')),
+          matching: find.byIcon(Icons.arrow_drop_down));
+      await tester.ensureVisible(menu);
+      await tester.pumpAndSettle();
+      await tester.tap(menu);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(picked).last);
+      await tester.pumpAndSettle();
+    }
+
+    await tester.ensureVisible(find.text('Save'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    return saved;
+  }
+
+  testWidgets('distance can be typed in', (tester) async {
+    final saved = await saveWithDistance(tester, typed: '35');
+    expect(saved!.distance, '35');
+  });
+
+  testWidgets('a distance range picked from the menu replaces what was typed',
+      (tester) async {
+    final saved = await saveWithDistance(tester, typed: '35', picked: '50-100');
+    expect(saved!.distance, '50-100');
   });
 }

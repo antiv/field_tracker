@@ -85,7 +85,7 @@
   "import_success": "KML imported successfully",
   "invalid_file_format": "Invalid file format",
   "photos": "Photos",
-  "point_photos": "Point photos",
+  "point_photos": "Habitat photo",
   "add_photo_camera": "Camera",
   "add_photo_gallery": "Gallery",
   "delete_photo": "Remove this photo?",
@@ -105,7 +105,7 @@
     "transect": "Transect",
     "point": "Point",
     "photos": "Photos",
-    "point_photos": "Point photos"
+    "point_photos": "Habitat photo"
   },
   "select_atlas_code": "Select atlas code",
   "select_code": "Select code: {}",

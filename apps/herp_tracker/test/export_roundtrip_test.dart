@@ -207,7 +207,7 @@ void main() {
       'Species,Date,Observation date,LAT,LONG,Altitude,GPS accuracy,Locality,'
       'Development stage,Sex,Data type,Collection method,Habitat type,'
       'Water habitat bed type,Exact number of individuals,Abundance range,Note,'
-      'Transect,Point,Photos,Point photos',
+      'Transect,Point,Photos,Habitat photo',
     );
     expect(
       lines[1],

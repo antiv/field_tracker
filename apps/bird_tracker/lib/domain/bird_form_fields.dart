@@ -7,8 +7,8 @@ import '../widgets/block_enum_radio.dart';
 import '../widgets/world_side_picker.dart';
 import 'bird_record.dart';
 
-/// The bird half of the record form: count, atlas code, direction and
-/// stratification, behaviour notes. The species field, the photos and the
+/// The bird half of the record form: count, atlas code, flight direction and
+/// stratification, distance and direction of the sighting, behaviour notes. The species field, the photos and the
 /// buttons are the shell's.
 class BirdFormFields extends StatefulWidget {
   const BirdFormFields({
@@ -28,8 +28,10 @@ class _BirdFormFieldsState extends RecordFieldsState<BirdFormFields> {
   final TextEditingController _countController =
       TextEditingController(text: '1');
   final TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController _distanceController = TextEditingController();
 
   Direction? _direction;
+  Direction? _sightingDirection;
   Stratification? _stratification = Stratification.d;
   int? _code;
 
@@ -40,6 +42,8 @@ class _BirdFormFieldsState extends RecordFieldsState<BirdFormFields> {
       _countController.text = existing.count.toString();
       _descriptionController.text = existing.description ?? '';
       _direction = existing.direction;
+      _distanceController.text = existing.distance ?? '';
+      _sightingDirection = existing.sightingDirection;
       _stratification = existing.stratification ?? Stratification.d;
       _code = existing.code;
     }
@@ -50,6 +54,7 @@ class _BirdFormFieldsState extends RecordFieldsState<BirdFormFields> {
   void dispose() {
     _countController.dispose();
     _descriptionController.dispose();
+    _distanceController.dispose();
     super.dispose();
   }
 
@@ -62,6 +67,10 @@ class _BirdFormFieldsState extends RecordFieldsState<BirdFormFields> {
       ..count = int.tryParse(_countController.text) ?? 1
       ..time = (existing as BirdRecord?)?.time ?? now
       ..direction = _direction
+      ..distance = _distanceController.text.trim().isEmpty
+          ? null
+          : _distanceController.text.trim()
+      ..sightingDirection = _sightingDirection
       ..stratification = _stratification
       ..description = _descriptionController.text;
   }
@@ -73,6 +82,8 @@ class _BirdFormFieldsState extends RecordFieldsState<BirdFormFields> {
       _descriptionController.clear();
       _code = null;
       _direction = null;
+      _distanceController.clear();
+      _sightingDirection = null;
       _stratification = Stratification.d;
     });
   }
@@ -138,6 +149,42 @@ class _BirdFormFieldsState extends RecordFieldsState<BirdFormFields> {
                   Stratification.s: Icon(Icons.vertical_align_center),
                   Stratification.d: Icon(Icons.vertical_align_bottom),
                 },
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: TextFormField(
+                key: const ValueKey('distance'),
+                controller: _distanceController,
+                decoration: InputDecoration(
+                  labelText: 'distance_label'.tr(),
+                  prefixIcon: const Icon(Icons.straighten),
+                  suffixIcon: PopupMenuButton<String>(
+                    icon: const Icon(Icons.arrow_drop_down),
+                    onSelected: (value) =>
+                        setState(() => _distanceController.text = value),
+                    itemBuilder: (context) => kDistanceOptions
+                        .map((o) => PopupMenuItem(value: o, child: Text(o)))
+                        .toList(),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: OptionPicker<Direction>(
+                key: ValueKey('sightingDirection$_sightingDirection'),
+                label: 'sighting_direction_label'.tr(),
+                icon: Icons.explore_outlined,
+                options: Direction.values,
+                value: _sightingDirection,
+                onChanged: (val) => setState(() => _sightingDirection = val),
+                labelOf: (d) => d.toShortString(),
               ),
             ),
           ],
