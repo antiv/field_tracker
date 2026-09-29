@@ -63,7 +63,7 @@ void main() {
 
     expect(find.text('Species'), findsOneWidget);
     expect(find.text('Count'), findsOneWidget);
-    expect(find.text('Behavior'), findsOneWidget);
+    expect(find.text('Comment'), findsOneWidget);
     expect(find.text('Select atlas code'), findsOneWidget);
     expect(find.text('Flight direction:'), findsOneWidget);
     expect(find.text('Strat.:'), findsOneWidget);
@@ -103,6 +103,9 @@ void main() {
     expect(saved!.distance, isNull);
     expect(saved!.sightingDirection, isNull);
 
+    /// no stratification until one is picked, so the export cell stays empty
+    expect(saved!.stratification, isNull);
+
     /// hh:mm:ss stamped at save time, not entered by the surveyor
     expect(saved!.time, matches(RegExp(r'^\d{2}:\d{2}:\d{2}$')));
   });
@@ -118,7 +121,7 @@ void main() {
 
     expect(find.text('Vrsta'), findsOneWidget);
     expect(find.text('Izaberi atlas kod'), findsOneWidget);
-    expect(find.text('Ponašanje'), findsOneWidget);
+    expect(find.text('Napomena'), findsOneWidget);
     expect(find.text('Pravac leta:'), findsOneWidget);
     expect(find.text('Udaljenost (m)'), findsOneWidget);
     expect(find.text('Pravac'), findsOneWidget);
