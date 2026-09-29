@@ -42,7 +42,7 @@ List<String> birdExportColumns() => const [
       'Latitude(DMS)',
       'Longitude(DMS)',
       'Count',
-      'Behavior',
+      'Comment',
       'Stratification',
       'Flight direction',
       'Code',

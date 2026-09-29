@@ -8,7 +8,7 @@ import '../widgets/world_side_picker.dart';
 import 'bird_record.dart';
 
 /// The bird half of the record form: count, atlas code, flight direction and
-/// stratification, distance and direction of the sighting, behaviour notes. The species field, the photos and the
+/// stratification (none until picked), distance and direction of the sighting, comment. The species field, the photos and the
 /// buttons are the shell's.
 class BirdFormFields extends StatefulWidget {
   const BirdFormFields({
@@ -32,7 +32,7 @@ class _BirdFormFieldsState extends RecordFieldsState<BirdFormFields> {
 
   Direction? _direction;
   Direction? _sightingDirection;
-  Stratification? _stratification = Stratification.d;
+  Stratification? _stratification;
   int? _code;
 
   @override
@@ -44,7 +44,7 @@ class _BirdFormFieldsState extends RecordFieldsState<BirdFormFields> {
       _direction = existing.direction;
       _distanceController.text = existing.distance ?? '';
       _sightingDirection = existing.sightingDirection;
-      _stratification = existing.stratification ?? Stratification.d;
+      _stratification = existing.stratification;
       _code = existing.code;
     }
     super.initState();
@@ -84,7 +84,7 @@ class _BirdFormFieldsState extends RecordFieldsState<BirdFormFields> {
       _direction = null;
       _distanceController.clear();
       _sightingDirection = null;
-      _stratification = Stratification.d;
+      _stratification = null;
     });
   }
 
