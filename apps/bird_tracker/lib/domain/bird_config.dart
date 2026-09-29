@@ -30,7 +30,8 @@ final TrackerConfig birdConfig = TrackerConfig(
 );
 
 /// The columns the bird CSV has always had, in that order and in English —
-/// the sheets built on the export expect them so.
+/// the sheets built on the export expect them so. Newer columns go after
+/// the old ones.
 List<String> birdExportColumns() => const [
       'Species',
       'Date',
@@ -43,8 +44,10 @@ List<String> birdExportColumns() => const [
       'Count',
       'Behavior',
       'Stratification',
-      'Direction',
+      'Flight direction',
       'Code',
+      'Distance (m)',
+      'Direction',
     ];
 
 List<String> birdExportValues(Placemark point, TrackerRecord record) {
@@ -71,5 +74,7 @@ List<String> birdExportValues(Placemark point, TrackerRecord record) {
     bird.stratification?.toShortString() ?? '',
     bird.direction?.toShortString() ?? '',
     bird.code?.toString() ?? '',
+    bird.distance ?? '',
+    bird.sightingDirection?.toShortString() ?? '',
   ];
 }

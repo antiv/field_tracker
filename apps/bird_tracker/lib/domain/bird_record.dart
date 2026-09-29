@@ -2,8 +2,9 @@ import 'package:collection/collection.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:tracker_core/tracker_core.dart';
 
-/// One bird sighting: species, count, atlas breeding code, time, and where
-/// in the vegetation and in which direction it was seen.
+/// One bird sighting: species, count, atlas breeding code, time, where in
+/// the vegetation it was seen and which way it flew, and how far from the
+/// point and in which direction it was spotted.
 class BirdRecord implements TrackerRecord {
   @override
   late String species;
@@ -14,7 +15,16 @@ class BirdRecord implements TrackerRecord {
   late String? description;
 
   Stratification? stratification;
+
+  /// Flight direction — not to be confused with [sightingDirection].
   Direction? direction;
+
+  /// Distance in metres from the point to the bird: a number typed in or one
+  /// of [kDistanceOptions].
+  String? distance;
+
+  /// Direction from the point in which the bird was spotted.
+  Direction? sightingDirection;
 
   @override
   List<String> photos = [];
@@ -28,6 +38,8 @@ class BirdRecord implements TrackerRecord {
         'description': description,
         'stratification': stratification?.name,
         'direction': direction?.name,
+        'distance': distance,
+        'sightingDirection': sightingDirection?.name,
         'photos': photos,
       };
 
@@ -43,6 +55,11 @@ class BirdRecord implements TrackerRecord {
         : null
     ..direction = json['direction'] != null
         ? Direction.values.firstWhereOrNull((e) => e.name == json['direction'])
+        : null
+    ..distance = json['distance'] as String?
+    ..sightingDirection = json['sightingDirection'] != null
+        ? Direction.values
+            .firstWhereOrNull((e) => e.name == json['sightingDirection'])
         : null
     ..photos =
         (json['photos'] as List<dynamic>?)?.cast<String>().toList() ?? [];
@@ -96,6 +113,9 @@ class BirdRecord implements TrackerRecord {
           parts.length < 6 ? null : '"${parts.sublist(5).join(', ')}"';
   }
 }
+
+/// The distance ranges offered next to a typed-in distance, in metres.
+const List<String> kDistanceOptions = ['<50', '50-100', '>100'];
 
 enum Stratification {
   g,

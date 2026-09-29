@@ -19,6 +19,8 @@ Transect buildTransect() {
     ..code = 12
     ..stratification = Stratification.g
     ..direction = Direction.nne
+    ..distance = '>100'
+    ..sightingDirection = Direction.sw
     ..description = 'pevanje, čučanje'
     ..photos = [photo, 'weird, name.jpg'];
 
@@ -79,6 +81,8 @@ void main() {
     expect(species.first['code'], 12);
     expect(species.first['stratification'], 'g');
     expect(species.first['direction'], 'nne');
+    expect(species.first['distance'], '>100');
+    expect(species.first['sightingDirection'], 'sw');
     expect(species.first['photos'], [photo, 'weird, name.jpg']);
 
     /// the description stays the human-readable one-line summary
@@ -104,6 +108,8 @@ void main() {
     expect(record.time, '21:15:30');
     expect(record.stratification, Stratification.g);
     expect(record.direction, Direction.nne);
+    expect(record.distance, '>100');
+    expect(record.sightingDirection, Direction.sw);
 
     /// the diacritics in the behaviour note used to be mangled by .codeUnits
     expect(record.description, 'pevanje, čučanje');
@@ -230,11 +236,11 @@ void main() {
     /// built on this export expect them — and the shared transect, point
     /// and photo columns (the record's, then the point's) follow; a photo name with a comma is quoted
     expect(lines[1],
-        endsWith(',G,NNE,12,Test transekt,1,"$photo; weird, name.jpg",'));
+        endsWith(',G,NNE,12,>100,SW,Test transekt,1,"$photo; weird, name.jpg",'));
 
     /// a record with only the required fields must still line up
     expect(lines[2], contains('Sitta europaea'));
-    expect(lines[2], endsWith(',,,,Test transekt,1,,'));
+    expect(lines[2], endsWith(',,,,,,Test transekt,1,,'));
   });
 
   testWidgets('the share button labels are plain keys, not blocks',
