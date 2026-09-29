@@ -188,6 +188,29 @@ void main() {
     expect(find.textContaining('12'), findsWidgets);
   });
 
+  testWidgets('the sighting direction offers the 8 main points only',
+      (tester) async {
+    await pumpForm(tester, const RecordFormShell());
+
+    final picker = find.byType(OptionPicker<Direction>);
+    await tester.ensureVisible(picker);
+    await tester.pumpAndSettle();
+    await tester.tap(picker);
+    await tester.pumpAndSettle();
+
+    for (final main in const ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']) {
+      expect(find.text(main), findsWidgets, reason: main);
+    }
+
+    /// the flight compass keeps its 16 points; its sub-point labels are
+    /// lowercase, so an uppercase NNE could only come from the dropdown
+    for (final sub in const [
+      'NNE', 'ENE', 'ESE', 'SSE', 'SSW', 'WSW', 'WNW', 'NNW' //
+    ]) {
+      expect(find.text(sub), findsNothing, reason: sub);
+    }
+  });
+
   Future<BirdRecord?> saveWithDistance(WidgetTester tester,
       {required String typed, String? picked}) async {
     BirdRecord? saved;

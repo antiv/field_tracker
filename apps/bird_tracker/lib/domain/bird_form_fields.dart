@@ -181,7 +181,13 @@ class _BirdFormFieldsState extends RecordFieldsState<BirdFormFields> {
                 key: ValueKey('sightingDirection$_sightingDirection'),
                 label: 'sighting_direction_label'.tr(),
                 icon: Icons.explore_outlined,
-                options: Direction.values,
+                /// the 8 main points only — a sighting is not pinned down
+                /// finer than that; a finer value a record already carries
+                /// stays selectable
+                options: [
+                  for (final d in Direction.values)
+                    if (!d.isSub() || d == _sightingDirection) d,
+                ],
                 value: _sightingDirection,
                 onChanged: (val) => setState(() => _sightingDirection = val),
                 labelOf: (d) => d.toShortString(),
