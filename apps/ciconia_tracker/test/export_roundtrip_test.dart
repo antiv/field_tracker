@@ -86,16 +86,15 @@ void main() {
           '+381601234567,Popis 2026,CT_20260504_101530_0a1b.jpg'),
     );
 
-    /// the balloon shows the same columns, and a single nest needs no numbering
+    /// the balloon has no table: the period and the nest's one line
     final placemark = XmlDocument.parse(buildTransect().toKML())
         .findAllElements('Placemark')
         .first;
-    final rows = {
-      for (final data in placemark.findAllElements('Data'))
-        data.getAttribute('name')!: data.findElements('value').first.innerText
-    };
-    expect(rows['Nest state'], 'Occupied nest with visible young');
-    expect(rows['Surveyor'], 'Petar Petrović');
+    final description = placemark.findElements('description').single.innerText;
+    expect(description,
+        startsWith('FROM: 04.05.2026 10:15:00 TO: 04.05.2026 10:20:00\n1. '));
+    expect(description, contains('Occupied nest with visible young'));
+    expect(placemark.findAllElements('Data'), isEmpty);
   });
 
   test('a KML round trip restores the nest through the payload', () {

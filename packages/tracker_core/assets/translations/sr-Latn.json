@@ -36,6 +36,8 @@
   "csv": "CSV",
   "kml": "KML",
   "kmz": "KMZ",
+  "point_from": "OD",
+  "point_to": "DO",
   "share": "Podeli",
   "csv_hint": "Tabela, jedan red po zapisu",
   "kml_hint": "Google My Maps i drugi pregledači — fotografije samo po imenu",

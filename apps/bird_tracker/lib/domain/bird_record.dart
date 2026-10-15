@@ -64,12 +64,11 @@ class BirdRecord implements TrackerRecord {
     ..photos =
         (json['photos'] as List<dynamic>?)?.cast<String>().toList() ?? [];
 
-  /// The line format every KML from before the ExtendedData payload carried
-  /// in its description — [fromSpeciesString] reads it back.
+  /// `Bubo bubo 1 15:55:43` — the record's line in the KML description.
+  /// Older exports carried a longer line there, which [fromSpeciesString]
+  /// still reads when such a file has no payload; every new export has one.
   @override
-  String get summary {
-    return '$species: $count, ${code ?? '-'}, $time, ${stratification?.toShortString() ?? ''}, ${direction?.toShortString() ?? ''}; ${description ?? ''}';
-  }
+  String get summary => '$species $count $time';
 
   @override
   String get subtitle => '${'count_label'.tr()} $count '

@@ -58,6 +58,31 @@ void main() {
     }
   });
 
+  testWidgets('every CSV header is in the app language', (tester) async {
+    /// the bird columns used to be fixed English while the core's followed
+    /// the language, so a Serbian export mixed the two
+    const expected = {
+      'en': 'Point,Species,Date,Time (from - to),Time,Latitude,Longitude,'
+          'Latitude(DMS),Longitude(DMS),Count,Distance (m),Direction,Comment,'
+          'Stratification,Flight direction,Code,Transect,Photos,Habitat photo',
+      'sr': 'Tačka,Vrsta,Datum,Vreme (od - do),Vreme,Geografska širina,'
+          'Geografska dužina,Geografska širina (DMS),Geografska dužina (DMS),'
+          'Broj,Udaljenost (m),Pravac,Napomena,Visina,Pravac leta,Kod,'
+          'Transekt,Fotografije,Fotografija staništa',
+    };
+    await pumpForm(tester, const SizedBox());
+    for (final locale in const [Locale('en'), Locale('sr', 'Latn')]) {
+      /// startLocale loses to the locale an earlier test saved; switch the
+      /// way the language menu does
+      final context = tester.element(find.byType(Scaffold));
+      await tester.runAsync(() => context.setLocale(locale));
+      await tester.pumpAndSettle();
+      final header = const LineSplitter().convert(Transect().toCSV()).first;
+      expect(header.replaceFirst('\uFEFF', ''),
+          expected[locale.languageCode]);
+    }
+  });
+
   testWidgets('shows the record fields and the photo strip', (tester) async {
     await pumpForm(tester, const RecordFormShell());
 

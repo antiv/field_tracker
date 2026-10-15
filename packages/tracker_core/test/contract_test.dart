@@ -118,30 +118,27 @@ void main() {
       expect(restored.markers!.single.accuracy, 4.8);
     });
 
-    test('the balloon lists every column of every record, numbered', () {
-      final kml = buildTransect().toKML();
+    test('the description is the period and a numbered line per record, '
+        'with no <Data> table', () {
+      final transect = buildTransect();
+      transect.markers!.single.endDate = DateTime(2026, 5, 4, 21, 40, 5);
       final placemark = XmlDocument.parse(
-        kml,
+        transect.toKML(),
       ).findAllElements('Placemark').first;
-      final rows = {
-        for (final data in placemark.findAllElements('Data'))
-          data.getAttribute('name')!: data
-              .findElements('value')
-              .first
-              .innerText,
-      };
-      expect(rows['1. Species'], 'Parus major');
-      expect(rows['1. Note'], 'uz put, "kod mosta"');
-      expect(rows['1. csv_header.photos'], 'a.jpg; b, c.jpg');
-      expect(rows['2. Species'], 'Sitta europaea');
-      expect(rows['2. Note'], '');
-      expect(rows.length, 3 * 2);
+      expect(
+        placemark.findElements('description').single.innerText,
+        'point_from: 04.05.2026 21:15:00 point_to: 04.05.2026 21:40:05\n'
+        '1. Parus major: uz put, "kod mosta"\n'
+        '2. Sitta europaea: ',
+      );
 
-      /// a single record needs no numbering
-      final one = buildTransect(
-        records: [TestRecord(species: 'Bufo bufo')],
-      ).toKML();
-      expect(one, contains('<Data name="Species">'));
+      /// a viewer renders <Data> rows as a table in the balloon — with
+      /// every field of a dozen records, an unreadable one
+      expect(placemark.findAllElements('Data'), isEmpty);
+
+      /// a point imported without times has no period line
+      final bare = Placemark(records: [TestRecord(species: 'Bufo bufo')]);
+      expect(bare.summary, '1. Bufo bufo: ');
     });
   });
 

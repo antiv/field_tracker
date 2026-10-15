@@ -394,5 +394,22 @@
   "location_permission_content": "Bird Tracker needs your location to track your route and record where you see birds.\n\nWe will first ask for regular location access, and then we will need \"Allow all the time\" permission to keep tracking even when the app is in the background or your screen is locked. Please allow both to make sure your transects are stored properly.",
   "location_permission_content_ios": "Bird Tracker needs your location to track your route and record where you see birds.\n\nPlease choose \"Allow While Using App\" in the next step. If iOS later asks to change the access to \"Always Allow\", please accept it so tracking can continue even when your screen is locked.",
   "about_description": "Universal application for field bird data collection.",
-  "precise_location_required": "Bird Tracker needs precise location to record the route and the sightings. Approximate location is not enough.\n\nIn the app settings, under Permissions → Location, turn on \"Use precise location\"."
+  "precise_location_required": "Bird Tracker needs precise location to record the route and the sightings. Approximate location is not enough.\n\nIn the app settings, under Permissions → Location, turn on \"Use precise location\".",
+  "csv_header": {
+    "species": "Species",
+    "date": "Date",
+    "time_range": "Time (from - to)",
+    "time": "Time",
+    "lat": "Latitude",
+    "lon": "Longitude",
+    "lat_dms": "Latitude(DMS)",
+    "lon_dms": "Longitude(DMS)",
+    "count": "Count",
+    "distance": "Distance (m)",
+    "direction": "Direction",
+    "comment": "Comment",
+    "stratification": "Stratification",
+    "flight_direction": "Flight direction",
+    "code": "Code"
+  }
 }

@@ -18,8 +18,9 @@ abstract class TrackerRecord {
   /// in here round-trips through the database, the backup and the KML payload.
   Map<String, dynamic> toJson();
 
-  /// One-line, human-readable rendering: the KML placemark description and
-  /// the balloon in Google Earth.
+  /// The record's line in the KML placemark description, after its number:
+  /// what was seen, how many and when (`Bubo bubo 1 15:55:43`). The balloon
+  /// shows nothing else about the record — the full record is the CSV's.
   String get summary;
 
   /// The line under the species name in the point's record list.
@@ -130,9 +131,8 @@ class TrackerConfig {
   final List<TrackerRecord> Function(String description)?
       recordsFromLegacyDescription;
 
-  /// Column headers of one record row in the CSV export, in order — also the
-  /// names of the `<Data>` rows a KML viewer shows in the balloon. Called at
-  /// export time so the labels follow the app language.
+  /// Column headers of one record row in the CSV export, in order. Called
+  /// at export time so the labels follow the app language.
   final List<String> Function() exportColumnLabels;
 
   /// Values for [exportColumnLabels], same order, same length. Empty rather

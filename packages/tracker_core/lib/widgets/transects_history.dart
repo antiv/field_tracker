@@ -124,7 +124,6 @@ class _TransectsHistoryState extends State<TransectsHistory> {
         Overlay.of(buttonContext).context.findRenderObject() as RenderBox?;
     if (origin == null || overlay == null) return;
     final hasPhotos = transects.any((t) => t.hasPhotos);
-    final kml = hasPhotos ? 'kmz'.tr() : 'kml'.tr();
 
     PopupMenuItem<_Share> item(String title, String hint, _Share share) =>
         PopupMenuItem(
@@ -145,7 +144,7 @@ class _TransectsHistoryState extends State<TransectsHistory> {
         item('kml'.tr(), 'kml_hint'.tr(), Transect.shareKMLOf),
         if (hasPhotos) item('kmz'.tr(), 'kmz_hint'.tr(), Transect.shareKMZOf),
         item(
-          '${'csv'.tr()} + $kml',
+          '${'csv'.tr()} + ${'kml'.tr()}',
           'csv_kml_hint'.tr(),
           Transect.shareCSVAndKMLOf,
         ),

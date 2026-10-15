@@ -264,7 +264,7 @@ class Transect {
     );
   }
 
-  /// Both formats, every file on its own — a CSV and a KML/KMZ per
+  /// Both formats, every file on its own — a CSV and a plain KML per
   /// transect — in one zip.
   static Future<void> shareCSVAndKMLOf(
     List<Transect> transects, [
@@ -273,7 +273,11 @@ class Transect {
     if (transects.isEmpty) return;
     final bases = _uniqueFileBases(transects);
     final csv = await _writeCSVFiles(transects, bases);
-    final (kml, _) = await _writeKMLFiles(transects, bases);
+    final (kml, _) = await _writeKMLFiles(
+      transects,
+      bases,
+      embedPhotos: false,
+    );
     await _shareFiles(
       transects,
       [...csv, ...kml],

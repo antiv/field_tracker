@@ -2,7 +2,6 @@
 import 'dart:convert';
 import 'dart:developer';
 
-import 'package:easy_localization/easy_localization.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:xml/xml.dart';
 
@@ -114,35 +113,14 @@ class KMLUtils {
             });
 
             builder.element('ExtendedData', nest: () {
-              /// One <Data> per field: that is what a viewer renders as the
-              /// name/value table in the balloon. The description alone is a
-              /// one-line summary, and a KML reader has no other way to show
-              /// the rest of a record.
               final config = TrackerConfig.current;
-              final labels = config.exportColumnLabels();
-              final records = marker.records ?? <TrackerRecord>[];
-              for (var i = 0; i < records.length; i++) {
-                /// a point can hold several records — number them, or the
-                /// table would repeat "Species" with no way to tell the
-                /// rows apart
-                final prefix = records.length > 1 ? '${i + 1}. ' : '';
-                final values = config.exportValues(marker, records[i]);
-                for (var c = 0; c < labels.length; c++) {
-                  _data(builder, '$prefix${labels[c]}', values[c]);
-                }
-                _data(builder, '$prefix${'csv_header.photos'.tr()}',
-                    records[i].photos.join('; '));
-              }
-              if (marker.photos.isNotEmpty) {
-                _data(builder, 'csv_header.point_photos'.tr(),
-                    marker.photos.join('; '));
-              }
 
-              /// The rows above are for humans and lose the enum names and
-              /// the exact timestamps; re-import reads this payload instead,
-              /// so no field survives only as a label — photo names included,
-              /// which no amount of prose could round-trip. Namespaced, so
-              /// viewers skip it rather than printing the JSON at the user.
+              /// No <Data> rows: a viewer renders them as a name/value table
+              /// in the balloon, and with every field of every record a point
+              /// with a dozen species was unreadable — the description says
+              /// enough. Re-import reads this payload, so no field survives
+              /// only as prose, photo names included. Namespaced, so viewers
+              /// skip it rather than printing the JSON at the user.
               builder.element(kRecordsDataName,
                   namespaceUri: config.kmlNamespace, nest: () {
                 builder.text(jsonEncode({
@@ -189,7 +167,13 @@ class KMLUtils {
         }); // end document
       }); // end kml
     });
-    return builder.buildDocument().toXmlString(pretty: true, indent: '\t');
+    /// pretty printing normalises the whitespace of every text node, and the
+    /// description is one line per record
+    return builder.buildDocument().toXmlString(
+        pretty: true,
+        indent: '\t',
+        preserveWhitespace: (node) =>
+            node is XmlElement && node.name.local == 'description');
   }
 
   Transect kmlToTransect(String kml, DateTime fileDate) {
@@ -276,19 +260,25 @@ class KMLUtils {
 
   /// Google Earth renders a CDATA description as HTML, so the images show up
   /// in the balloon. `files/` is the KMZ convention for bundled resources.
+  /// The same lines as the plain [Placemark.summary], each record's photos
+  /// under its line.
   static String _htmlDescription(Placemark marker, Set<String> bundled) {
     final sb = StringBuffer();
-    for (final photo in marker.photos.where(bundled.contains)) {
-      sb.write('<img src="$kKmzFilesDir/${_escape(photo)}" width="400"/><br/>');
-    }
-    for (final record in marker.records ?? <TrackerRecord>[]) {
-      sb.write('<p><b>${_escape(record.species)}</b><br/>');
-      sb.write(_escape(record.summary));
-      sb.write('</p>');
-      for (final photo in record.photos.where(bundled.contains)) {
+    void images(List<String> photos) {
+      for (final photo in photos.where(bundled.contains)) {
         sb.write(
             '<img src="$kKmzFilesDir/${_escape(photo)}" width="400"/><br/>');
       }
+    }
+
+    images(marker.photos);
+    final period = marker.period;
+    if (period != null) sb.write('${_escape(period)}<br/>');
+    final lines = marker.recordLines;
+    final records = marker.records ?? <TrackerRecord>[];
+    for (var i = 0; i < lines.length; i++) {
+      sb.write('${_escape(lines[i])}<br/>');
+      images(records[i].photos);
     }
     return sb.toString();
   }
@@ -298,15 +288,6 @@ class KMLUtils {
       .replaceAll('<', '&lt;')
       .replaceAll('>', '&gt;')
       .replaceAll('"', '&quot;');
-
-  static void _data(XmlBuilder builder, String name, String value) {
-    builder.element('Data', nest: () {
-      builder.attribute('name', name);
-      builder.element('value', nest: () {
-        builder.text(value);
-      });
-    });
-  }
 
   /// Records written by a tracker app travel in ExtendedData. A KML from
   /// anywhere else — or from before this payload existed — simply has none,

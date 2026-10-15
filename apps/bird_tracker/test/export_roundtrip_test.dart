@@ -61,6 +61,20 @@ void main() {
     await EasyLocalization.ensureInitialized();
   });
 
+  test('the KML description is the period and one short line per record',
+      () {
+    final placemark = XmlDocument.parse(buildTransect().toKML())
+        .findAllElements('Placemark')
+        .firstWhere((p) => p.getAttribute('id') == 'marker0');
+    expect(
+      placemark.findElements('description').single.innerText,
+      'point_from: 04.05.2026 21:15:00 point_to: 04.05.2026 21:45:00\n'
+      '1. Parus major 3 21:15:30\n'
+      '2. Sitta europaea 1 21:40:00',
+    );
+    expect(placemark.findAllElements('Data'), isEmpty);
+  });
+
   test('the KML payload carries every record field, photos included', () {
     final kml = buildTransect().toKML();
     final placemark = XmlDocument.parse(kml)
@@ -225,21 +239,28 @@ void main() {
     final csv = buildTransect().toCSV();
     final lines = const LineSplitter().convert(csv);
     expect(lines.length, 3);
-    expect(lines.first,
-        startsWith('csv_header.point,Species,Date,Time (from - to),Time,'));
+    /// no translations are loaded here, so the headers read as their keys;
+    /// species_form_test checks them in both languages
+    expect(
+        lines.first,
+        'csv_header.point,'
+        '${kBirdColumnKeys.map((k) => 'csv_header.$k').join(',')},'
+        'csv_header.transect,csv_header.photos,csv_header.point_photos');
 
     expect(lines[1], contains('Parus major'));
     expect(lines[1], contains('44.812345'));
     expect(lines[1], contains('20.361234'));
     expect(lines[1], contains('"pevanje, čučanje"'));
 
-    /// the point number leads; the bird columns keep their order and English
-    /// headers — the sheets built on this export expect them — and the shared
-    /// transect and photo columns (the record's, then the point's) follow; a
-    /// photo name with a comma is quoted
+    /// the point number leads, count is followed by distance and sighting
+    /// direction, then comment, stratification, flight direction and code;
+    /// the shared transect and photo columns (the record's, then the
+    /// point's) close the row, and a photo name with a comma is quoted
     expect(lines[1], startsWith('1,Parus major,'));
-    expect(lines[1],
-        endsWith(',G,NNE,12,>100,SW,Test transekt,"$photo; weird, name.jpg",'));
+    expect(
+        lines[1],
+        endsWith(',3,>100,SW,"pevanje, čučanje",G,NNE,12,'
+            'Test transekt,"$photo; weird, name.jpg",'));
 
     /// a record with only the required fields must still line up
     expect(lines[2], contains('Sitta europaea'));

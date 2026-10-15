@@ -1,5 +1,5 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:intl/intl.dart';
 
 import '../config/tracker_config.dart';
 import '../utils/geo_utils.dart';
@@ -136,12 +136,27 @@ class Placemark {
     return '';
   }
 
-  /// All records, one summary per line — the KML placemark description.
-  String get summary {
-    final list = records;
-    if (list == null || list.isEmpty) return 'No species recorded';
-    return list.map((e) => e.summary).join('\n');
+  /// `FROM: <start> TO: <end>` — when the point was surveyed, for the KML
+  /// description. Null on a point imported from a KML that carried no times.
+  String? get period {
+    if (startDate == null) return null;
+    final format = DateFormat('dd.MM.yyyy HH:mm:ss');
+    return [
+      '${'point_from'.tr()}: ${format.format(startDate!)}',
+      if (endDate != null) '${'point_to'.tr()}: ${format.format(endDate!)}',
+    ].join(' ');
   }
+
+  /// The records as numbered lines, one [TrackerRecord.summary] each.
+  List<String> get recordLines => [
+    for (final (i, record) in (records ?? <TrackerRecord>[]).indexed)
+      '${i + 1}. ${record.summary}',
+  ];
+
+  /// The KML placemark description: [period], then [recordLines]. Short on
+  /// purpose — a point can hold dozens of records, and a field-by-field
+  /// table of every one of them made the balloon unusable.
+  String get summary => [?period, ...recordLines].join('\n');
 
   LatLng get latLng {
     return LatLng(latitude!, longitude!);

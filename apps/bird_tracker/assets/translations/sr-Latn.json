@@ -394,5 +394,22 @@
   "location_permission_content": "Bird Tracker zahteva vašu lokaciju da prati vašu rutu i beleži gde vidite ptice.\n\nPrvo ćemo tražiti redovan pristup lokaciji, a zatim će nam trebati dozvola \"Dozvoli sve vreme\" da nastavimo praćenje čak i kada je aplikacija u pozadini ili je ekran zaključan. Molimo dozvolite obe kako biste bili sigurni da su vaši transekti ispravno sačuvani.",
   "location_permission_content_ios": "Bird Tracker zahteva vašu lokaciju da prati vašu rutu i beleži gde vidite ptice.\n\nU sledećem koraku izaberite \"Dozvoli dok se koristi aplikacija\". Ako vas iOS kasnije pita da promenite pristup na \"Uvek dozvoli\", prihvatite kako bi praćenje nastavilo da radi i kada je ekran zaključan.",
   "about_description": "Univerzalna aplikacija za terensko prikupljanje podataka o pticama.",
-  "precise_location_required": "Bird Tracker-u je potrebna precizna lokacija da bi beležio rutu i zapažanja. Približna lokacija nije dovoljna.\n\nU podešavanjima aplikacije, pod Dozvole → Lokacija, uključite \"Koristi preciznu lokaciju\"."
+  "precise_location_required": "Bird Tracker-u je potrebna precizna lokacija da bi beležio rutu i zapažanja. Približna lokacija nije dovoljna.\n\nU podešavanjima aplikacije, pod Dozvole → Lokacija, uključite \"Koristi preciznu lokaciju\".",
+  "csv_header": {
+    "species": "Vrsta",
+    "date": "Datum",
+    "time_range": "Vreme (od - do)",
+    "time": "Vreme",
+    "lat": "Geografska širina",
+    "lon": "Geografska dužina",
+    "lat_dms": "Geografska širina (DMS)",
+    "lon_dms": "Geografska dužina (DMS)",
+    "count": "Broj",
+    "distance": "Udaljenost (m)",
+    "direction": "Pravac",
+    "comment": "Napomena",
+    "stratification": "Visina",
+    "flight_direction": "Pravac leta",
+    "code": "Kod"
+  }
 }

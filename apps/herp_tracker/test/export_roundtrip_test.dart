@@ -139,8 +139,8 @@ void main() {
     expect(restored.markers!.single.hasFiniteLatLng, isFalse);
   });
 
-  testWidgets('the KML balloon shows every field as its own row',
-      (tester) async {
+  testWidgets('the KML description is the period and one short line per '
+      'record, with no table', (tester) async {
     await tester.runAsync(() async {
       await tester.pumpWidget(localizedTestApp());
       await tester.pump();
@@ -151,29 +151,16 @@ void main() {
     final placemark = XmlDocument.parse(kml)
         .findAllElements('Placemark')
         .firstWhere((p) => p.getAttribute('id') == 'marker0');
-    final rows = {
-      for (final data in placemark.findAllElements('Data'))
-        data.getAttribute('name')!: data.findElements('value').first.innerText
-    };
+    expect(
+      placemark.findElements('description').single.innerText,
+      'FROM: 04.05.2026 21:15:00 TO: 04.05.2026 21:45:00\n'
+      '1. Bufo bufo 3 21:15:30\n'
+      '2. Natrix natrix 1 21:40:00',
+    );
 
-    /// the point holds two records, so every row is numbered — otherwise the
-    /// table would repeat "Species" with nothing to tell the rows apart
-    expect(rows['1. Species'], 'Bufo bufo');
-    expect(rows['2. Species'], 'Natrix natrix');
-
-    /// labels are the CSV headers in the app language, not raw keys
-    expect(rows.keys, isNot(contains(anyElement(contains('csv_header')))));
-    expect(rows['1. Development stage'], 'Adult');
-    expect(rows['1. Exact number of individuals'], '3');
-    expect(rows['1. Photos'], 'HT_20260504_211530_0a1b.jpg; weird, name.jpg');
-
-    /// a field the surveyor left blank still gets a row — the viewer shows it
-    /// as "No value", which is information too
-    expect(rows.containsKey('2. Note'), isTrue);
-    expect(rows['2. Note'], '');
-
-    /// every record column, for both records, plus the photo row
-    expect(rows.length, (kRecordColumnKeys.length + 1) * 2);
+    /// a viewer renders <Data> rows as a table in the balloon — with every
+    /// field of every record it grew unusable on a busy point
+    expect(placemark.findAllElements('Data'), isEmpty);
 
     /// the machine payload stays, namespaced so viewers skip it
     expect(

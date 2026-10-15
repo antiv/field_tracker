@@ -1,4 +1,4 @@
-import 'package:intl/intl.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:tracker_core/tracker_core.dart';
 
 import '../configuration/species.dart';
@@ -29,26 +29,30 @@ final TrackerConfig birdConfig = TrackerConfig(
           key: key, existing: existing as BirdRecord?, photoStrip: photoStrip),
 );
 
-/// The columns the bird CSV has always had, in that order and in English —
-/// the sheets built on the export expect them so. Newer columns go after
-/// the old ones.
-List<String> birdExportColumns() => const [
-      'Species',
-      'Date',
-      'Time (from - to)',
-      'Time',
-      'Latitude',
-      'Longitude',
-      'Latitude(DMS)',
-      'Longitude(DMS)',
-      'Count',
-      'Comment',
-      'Stratification',
-      'Flight direction',
-      'Code',
-      'Distance (m)',
-      'Direction',
-    ];
+/// The bird CSV columns as `csv_header.*` keys, in the order the survey
+/// sheet wants them. The core puts the point number before them and the
+/// transect and photos after them.
+const List<String> kBirdColumnKeys = [
+  'species',
+  'date',
+  'time_range',
+  'time',
+  'lat',
+  'lon',
+  'lat_dms',
+  'lon_dms',
+  'count',
+  'distance',
+  'direction',
+  'comment',
+  'stratification',
+  'flight_direction',
+  'code',
+];
+
+/// Headers follow the app language, like the core's own columns.
+List<String> birdExportColumns() =>
+    [for (final key in kBirdColumnKeys) 'csv_header.$key'.tr()];
 
 List<String> birdExportValues(Placemark point, TrackerRecord record) {
   final bird = record as BirdRecord;
@@ -70,11 +74,11 @@ List<String> birdExportValues(Placemark point, TrackerRecord record) {
     lat == null ? '' : convertLatLng(lat, true),
     lon == null ? '' : convertLatLng(lon, false),
     bird.count.toString(),
+    bird.distance ?? '',
+    bird.sightingDirection?.toShortString() ?? '',
     bird.description ?? '',
     bird.stratification?.toShortString() ?? '',
     bird.direction?.toShortString() ?? '',
     bird.code?.toString() ?? '',
-    bird.distance ?? '',
-    bird.sightingDirection?.toShortString() ?? '',
   ];
 }

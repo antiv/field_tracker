@@ -70,20 +70,14 @@ class HerpRecord implements TrackerRecord {
     ..note = json['note'] as String?
     ..photos = (json['photos'] as List<dynamic>?)?.cast<String>().toList() ?? [];
 
-  /// Localized one-line summary, used in lists and in the KML description.
+  /// `Bufo bufo 3 21:15:30` — the record's line in the KML description;
+  /// the abundance range stands in for a count nobody took.
   @override
-  String get summary {
-    final parts = <String>[
-      if (count != null) '${'count_label'.tr()} $count',
-      if (abundance != null) abundance!.label,
-      if (stage != null) optionLabel(stage),
-      if (sex != null) optionLabel(sex),
-      DateFormat('HH:mm:ss').format(observedAt),
-      if (locality?.isNotEmpty ?? false) locality!,
-      if (note?.isNotEmpty ?? false) note!,
-    ];
-    return '$species: ${parts.join(', ')}';
-  }
+  String get summary => [
+    species,
+    if (count != null) '$count' else if (abundance != null) abundance!.label,
+    DateFormat('HH:mm:ss').format(observedAt),
+  ].join(' ');
 
   /// number • stage • sex • time — the fields a surveyor scans a list for
   @override
