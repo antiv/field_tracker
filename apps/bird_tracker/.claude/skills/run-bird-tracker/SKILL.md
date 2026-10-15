@@ -51,7 +51,9 @@ Landmarks on iPhone 16 Pro, English UI (Pause and the CSV / KML footer buttons w
 | Drawer → Saved tracks (history sheet) | 107 292 |
 | Form: species field / Save and new / Save | 200 158 / 200 733 / 330 733 |
 | Form: Gallery (photo picker; Add is at 369 100) | 128 657 |
-| History selection footer: CSV / KML / CSV+KML / Delete | 72 755 / 200 755 / 329 755 / 200 807 |
+| History row: Share (opens the format menu) | 59 564 |
+| Share menu (row, transect with photos): CSV / KML / KMZ / CSV+KMZ | 150 592 / 150 655 / 150 725 / 150 790 |
+| History selection footer: Share / Delete | 104 807 / 297 807 |
 | Share sheet close (×) | 372 438 |
 
 ## Run (human path)
@@ -66,6 +68,8 @@ cd ../.. && tool/check_all.sh     # analyze + test, core and all three apps
 
 ## Gotchas
 
+- **`sim.sh tap` is a held touch** (`axe touch --down --up --delay 0.12`), not `axe tap`: after a simulator reboot the instant tap stopped reaching Flutter's buttons altogether while the native map still panned.
+- Close an iOS share sheet with `swipe 200 530 200 860`; a tap outside it closes the bottom sheet underneath instead and leaves the share sheet up.
 - **No Simulator.app** in `/Applications/Xcode.app` here: simulators run headless, so `cliclick`/AppleScript cannot click anything. AXe talks to the device directly.
 - **Typing does not work**: `axe type` / `axe key` (HID keyboard) and `simctl pbcopy` (the pasteboard stays empty, `pbpaste` returns nothing) never reach a Flutter text field. `sim.sh type` instead sets the focused `EditableText`'s controller through the VM service, which fires `onChanged`, so the species autocomplete opens as if typed. Tap the field first; `type` needs a primary focus.
 - **VM `evaluate` compiles in a library's scope.** Default is `package:flutter/src/widgets/editable_text.dart`; for `DataService()` pass `package:tracker_core/service/data_service.dart`. A `void` expression followed by `.toString()` is an "Expression compilation error" — evaluate an assignment or a value instead.

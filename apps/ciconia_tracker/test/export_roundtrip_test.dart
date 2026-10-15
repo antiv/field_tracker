@@ -72,18 +72,18 @@ void main() {
     expect(lines.length, 2);
     expect(
       lines.first,
-      'Date,Time,Latitude,Longitude,Latitude (DMS),Longitude (DMS),'
+      'Point,Date,Time,Latitude,Longitude,Latitude (DMS),Longitude (DMS),'
       'Nest position,Nest state,Young,Atlas code,Place,Municipality,Note,'
-      'Surveyor,Email,Phone,Transect,Point,Photos,Habitat photo',
+      'Surveyor,Email,Phone,Transect,Photos,Habitat photo',
     );
     expect(
       lines[1],
-      startsWith('04.05.2026,10:15:30,45.812345,19.061234,'
+      startsWith('1,04.05.2026,10:15:30,45.812345,19.061234,'
           '"N 45° 48\' 44.44"" ","E 19° 3\' 40.44"" ",'
           'Low-voltage power pole — on a purpose-built platform,'
           'Occupied nest with visible young,3,16,Bački Monoštor,Sombor,'
           '"Platforma, ""nova""",Petar Petrović,petar@example.com,'
-          '+381601234567,Popis 2026,1,CT_20260504_101530_0a1b.jpg'),
+          '+381601234567,Popis 2026,CT_20260504_101530_0a1b.jpg'),
     );
 
     /// the balloon shows the same columns, and a single nest needs no numbering

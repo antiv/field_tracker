@@ -52,7 +52,9 @@ ss)
   w=$(sips -g pixelWidth $f | awk '/pixelWidth/{print $2}'); h=$(sips -g pixelHeight $f | awk '/pixelHeight/{print $2}')
   sips -z $((h / SCALE)) $((w / SCALE)) $f >/dev/null
   echo $f ;;
-tap)       axe tap -x $2 -y $3 --udid $U ;;
+# a held touch, not `axe tap`: its instant down/up sometimes never reaches
+# Flutter's gesture arena (the native map still pans) — seen after a reboot
+tap)       axe touch -x $2 -y $3 --down --up --delay 0.12 --udid $U >/dev/null; echo "tap $2 $3" ;;
 swipe)     axe swipe --start-x $2 --start-y $3 --end-x $4 --end-y $5 --duration 0.6 --udid $U >/dev/null ;;
 longpress) axe touch -x $2 -y $3 --down --udid $U >/dev/null; sleep ${4:-1}; axe touch -x $2 -y $3 --up --udid $U >/dev/null ;;
 type)

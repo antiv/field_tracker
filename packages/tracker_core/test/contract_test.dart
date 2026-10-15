@@ -146,20 +146,20 @@ void main() {
   });
 
   group('CSV', () {
-    test('app columns first, then transect, point and photos; RFC 4180', () {
+    test('point first, then app columns, transect and photos; RFC 4180', () {
       final transect = buildTransect();
       transect.markers!.single.photos = ['p.jpg'];
       final lines = const LineSplitter().convert(transect.toCSV());
       expect(
         lines.first,
-        'Species,Note,csv_header.transect,csv_header.point,csv_header.photos,'
+        'csv_header.point,Species,Note,csv_header.transect,csv_header.photos,'
         'csv_header.point_photos',
       );
       expect(
         lines[1],
-        'Parus major,"uz put, ""kod mosta""","Test, transekt",1,"a.jpg; b, c.jpg",p.jpg',
+        '1,Parus major,"uz put, ""kod mosta""","Test, transekt","a.jpg; b, c.jpg",p.jpg',
       );
-      expect(lines[2], 'Sitta europaea,,"Test, transekt",1,,p.jpg');
+      expect(lines[2], '1,Sitta europaea,,"Test, transekt",,p.jpg');
     });
   });
 

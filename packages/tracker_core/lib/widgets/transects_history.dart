@@ -9,6 +9,9 @@ import '../model/transect.dart';
 import '../service/data_service.dart';
 import '../utils/ux_builder.dart';
 
+/// One of [Transect]'s multi-transect exports.
+typedef _Share = Future<void> Function(List<Transect>, [Rect?]);
+
 class TransectsHistory extends StatefulWidget {
   const TransectsHistory({super.key});
 
@@ -109,12 +112,59 @@ class _TransectsHistoryState extends State<TransectsHistory> {
     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
   );
 
-  Widget _shareButton(String label, void Function(Rect?) share) => Builder(
+  /// Every format behind one button: a menu opens over it, KMZ only when
+  /// there is a photo to put in one. Every export sends one file per
+  /// transect and format; several files go out as one zip.
+  Future<void> _openShareMenu(
+    BuildContext buttonContext,
+    List<Transect> transects,
+  ) async {
+    final origin = _originOf(buttonContext);
+    final overlay =
+        Overlay.of(buttonContext).context.findRenderObject() as RenderBox?;
+    if (origin == null || overlay == null) return;
+    final hasPhotos = transects.any((t) => t.hasPhotos);
+    final kml = hasPhotos ? 'kmz'.tr() : 'kml'.tr();
+
+    PopupMenuItem<_Share> item(String title, String hint, _Share share) =>
+        PopupMenuItem(
+          value: share,
+          child: ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            title: Text(title),
+            subtitle: Text(hint),
+          ),
+        );
+
+    final share = await showMenu<_Share>(
+      context: buttonContext,
+      position: RelativeRect.fromRect(origin, Offset.zero & overlay.size),
+      items: [
+        item('csv'.tr(), 'csv_hint'.tr(), Transect.shareCSVOf),
+        item('kml'.tr(), 'kml_hint'.tr(), Transect.shareKMLOf),
+        if (hasPhotos) item('kmz'.tr(), 'kmz_hint'.tr(), Transect.shareKMZOf),
+        item(
+          '${'csv'.tr()} + $kml',
+          'csv_kml_hint'.tr(),
+          Transect.shareCSVAndKMLOf,
+        ),
+      ],
+    );
+    await share?.call(transects, origin);
+  }
+
+  Widget _shareButton(List<Transect> transects, {bool small = true}) => Builder(
     builder: (buttonContext) => ElevatedButton.icon(
-      onPressed: () => share(_originOf(buttonContext)),
-      icon: const Icon(Icons.share, size: 14),
-      style: _smallButton,
-      label: Text(label, style: const TextStyle(fontSize: 11)),
+      onPressed: transects.isEmpty
+          ? null
+          : () => _openShareMenu(buttonContext, transects),
+      icon: Icon(Icons.share, size: small ? 14 : 18),
+      style: small ? _smallButton : null,
+      label: Text(
+        'share'.tr(),
+        style: small ? const TextStyle(fontSize: 11) : null,
+      ),
     ),
   );
 
@@ -178,54 +228,21 @@ class _TransectsHistoryState extends State<TransectsHistory> {
       );
     }
     final picked = _selectedTransects;
-    final enabled = picked.isNotEmpty;
-    final kml = picked.any((t) => t.hasPhotos) ? 'kmz'.tr() : 'kml'.tr();
-
-    /// every export sends one file per transect and format; several files
-    /// go out as one zip
-    Widget export(
-      String label,
-      Future<void> Function(List<Transect>, [Rect?]) share,
-    ) => Expanded(
-      child: Builder(
-        builder: (buttonContext) => ElevatedButton.icon(
-          onPressed: enabled
-              ? () => share(picked, _originOf(buttonContext))
-              : null,
-          style: ElevatedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-          ),
-          icon: const Icon(Icons.share, size: 16),
-          label: FittedBox(child: Text(label)),
-        ),
-      ),
-    );
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      child: Row(
         children: [
-          Row(
-            children: [
-              export('csv'.tr(), Transect.shareCSVOf),
-              const SizedBox(width: 8),
-              export(kml, Transect.shareKMLOf),
-              const SizedBox(width: 8),
-              export('${'csv'.tr()} + $kml', Transect.shareCSVAndKMLOf),
-            ],
-          ),
-          const SizedBox(height: 4),
-          SizedBox(
-            width: double.infinity,
+          Expanded(child: _shareButton(picked, small: false)),
+          const SizedBox(width: 8),
+          Expanded(
             child: ElevatedButton.icon(
-              onPressed: enabled ? () => _delete(picked) : null,
+              onPressed: picked.isNotEmpty ? () => _delete(picked) : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red.shade700,
                 foregroundColor: Colors.white,
               ),
               icon: const Icon(Icons.delete, size: 18),
-              label: Text('delete_selected'.tr()),
+              label: FittedBox(child: Text('delete_selected'.tr())),
             ),
           ),
         ],
@@ -301,17 +318,9 @@ class _TransectsHistoryState extends State<TransectsHistory> {
                             /// in selection mode the actions live in the
                             /// footer and apply to every ticked transect
                             if (!_selecting)
-                              Row(
-                                children: [
-                                  _shareButton('csv'.tr(), transect.shareCSV),
-                                  const SizedBox(width: 8),
-                                  _shareButton(
-                                    transect.hasPhotos
-                                        ? 'kmz'.tr()
-                                        : 'kml'.tr(),
-                                    transect.shareKML,
-                                  ),
-                                ],
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: _shareButton([transect]),
                               ),
                           ],
                         ),

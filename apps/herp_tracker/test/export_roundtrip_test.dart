@@ -204,17 +204,17 @@ void main() {
     expect(lines.length, 3);
     expect(
       lines.first,
-      'Species,Date,Observation date,LAT,LONG,Altitude,GPS accuracy,Locality,'
+      'Point,Species,Date,Observation date,LAT,LONG,Altitude,GPS accuracy,Locality,'
       'Development stage,Sex,Data type,Collection method,Habitat type,'
       'Water habitat bed type,Exact number of individuals,Abundance range,Note,'
-      'Transect,Point,Photos,Habitat photo',
+      'Transect,Photos,Habitat photo',
     );
     expect(
       lines[1],
-      'Bufo bufo,04.05.2026,04.05.2026 21:15:30,44.812345,20.361234,117.4,4.8,'
+      '1,Bufo bufo,04.05.2026,04.05.2026 21:15:30,44.812345,20.361234,117.4,4.8,'
       'Deliblatska peščara,Adult,F,Observation,Hand capture,'
       'Settlement and buildings,Muddy,3,2-5,'
-      '"Uz put, ""kod mosta""; kiša",Test transekt,1,'
+      '"Uz put, ""kod mosta""; kiša",Test transekt,'
       '"HT_20260504_211530_0a1b.jpg; weird, name.jpg",',
     );
     // a record with only the required fields must still line up

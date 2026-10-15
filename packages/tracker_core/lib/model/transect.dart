@@ -131,17 +131,17 @@ class Transect {
     return DateFormat('dd.MM.yyyy HH:mm:ss').format(startDate);
   }
 
-  /// Convert the transect to CSV: the app's record columns, then the
-  /// transect name, the point number and the photo names. Headers follow the
+  /// Convert the transect to CSV: the point number, the app's record
+  /// columns, then the transect name and the photo names. Headers follow the
   /// app language, so the sheet the surveyor pastes into reads naturally.
   String toCSV() {
     final config = TrackerConfig.current;
     final sb = StringBuffer();
     sb.writeln(
       [
+        'csv_header.point'.tr(),
         ...config.exportColumnLabels(),
         'csv_header.transect'.tr(),
-        'csv_header.point'.tr(),
         'csv_header.photos'.tr(),
         'csv_header.point_photos'.tr(),
       ].map(csvCell).join(','),
@@ -150,9 +150,9 @@ class Transect {
       for (final record in point.records ?? const <TrackerRecord>[]) {
         sb.writeln(
           [
+            '${(point.id ?? 0) + 1}',
             ...config.exportValues(point, record),
             name ?? '',
-            '${(point.id ?? 0) + 1}',
             record.photos.join('; '),
             point.photos.join('; '),
           ].map(csvCell).join(','),
@@ -183,7 +183,7 @@ class Transect {
 
   /// True when any point or record names a photo. Deliberately reads nothing off the
   /// disk — the history list calls this from its item builder on every frame.
-  /// The export checks what is actually there, once, in [shareKML].
+  /// The export checks what is actually there, once, in [shareKMZOf].
   bool get hasPhotos =>
       markers?.any(
         (marker) =>
@@ -225,28 +225,42 @@ class Transect {
     );
   }
 
-  /// Share the transect as KML, or as KMZ when there are photos to embed —
-  /// a plain KML could only name them.
+  /// Share the transect as a plain KML — photos only by name, but it is what
+  /// Google My Maps and the other light viewers take.
   Future<void> shareKML([Rect? sharePositionOrigin]) =>
       shareKMLOf([this], sharePositionOrigin);
 
-  /// One KML/KMZ per transect — an import reads a file as one transect —
-  /// and several go out zipped together.
+  /// One plain KML per transect — an import reads a file as one transect —
+  /// and several go out zipped together. Photos are left to the KMZ.
   static Future<void> shareKMLOf(
     List<Transect> transects, [
     Rect? sharePositionOrigin,
-  ]) async {
+  ]) => _shareKMLOf(transects, embedPhotos: false, origin: sharePositionOrigin);
+
+  /// Like [shareKMLOf], but a transect with photos on disk goes out as a KMZ
+  /// that carries them; one without stays a plain KML.
+  static Future<void> shareKMZOf(
+    List<Transect> transects, [
+    Rect? sharePositionOrigin,
+  ]) => _shareKMLOf(transects, embedPhotos: true, origin: sharePositionOrigin);
+
+  static Future<void> _shareKMLOf(
+    List<Transect> transects, {
+    required bool embedPhotos,
+    Rect? origin,
+  }) async {
     if (transects.isEmpty) return;
     final (paths, anyKmz) = await _writeKMLFiles(
       transects,
       _uniqueFileBases(transects),
+      embedPhotos: embedPhotos,
     );
     await _shareFiles(
       transects,
       paths,
       singleLabel: '${transects.first._exportLabel} ${anyKmz ? 'KMZ' : 'KML'}',
-      zipKind: 'kml',
-      sharePositionOrigin: sharePositionOrigin,
+      zipKind: anyKmz ? 'kmz' : 'kml',
+      sharePositionOrigin: origin,
     );
   }
 
@@ -289,12 +303,16 @@ class Transect {
 
   static Future<(List<String>, bool)> _writeKMLFiles(
     List<Transect> transects,
-    List<String> bases,
-  ) async {
+    List<String> bases, {
+    bool embedPhotos = true,
+  }) async {
     final paths = <String>[];
     var anyKmz = false;
     for (var i = 0; i < transects.length; i++) {
-      final (path, isKmz) = await transects[i]._writeKMLFile(bases[i]);
+      final (path, isKmz) = await transects[i]._writeKMLFile(
+        bases[i],
+        embedPhotos: embedPhotos,
+      );
       anyKmz |= isKmz;
       paths.add(path);
     }
@@ -340,11 +358,16 @@ class Transect {
     ];
   }
 
-  /// Writes the transect as `<base>.kml`, or `<base>.kmz` when there are
-  /// photos on disk to embed. This is the one place that asks the disk which
-  /// of the named photos still exist.
-  Future<(String, bool)> _writeKMLFile(String base) async {
-    final photos = hasPhotos ? KMZUtils.availablePhotos(this) : <String>[];
+  /// Writes the transect as `<base>.kml`, or `<base>.kmz` when [embedPhotos]
+  /// and there are photos on disk to embed. This is the one place that asks
+  /// the disk which of the named photos still exist.
+  Future<(String, bool)> _writeKMLFile(
+    String base, {
+    bool embedPhotos = true,
+  }) async {
+    final photos = embedPhotos && hasPhotos
+        ? KMZUtils.availablePhotos(this)
+        : <String>[];
     final isKmz = photos.isNotEmpty;
     final String path = await temporaryFilePath(
       '$base.${isKmz ? 'kmz' : 'kml'}',

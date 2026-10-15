@@ -218,29 +218,33 @@ void main() {
     expect(lines.length, 2);
 
     /// the date and the time range come back empty rather than crashing
-    expect(lines[1], startsWith('Parus major,,,21:15:30,'));
+    expect(lines[1], startsWith('1,Parus major,,,21:15:30,'));
   });
 
   test('CSV carries every record field', () {
     final csv = buildTransect().toCSV();
     final lines = const LineSplitter().convert(csv);
     expect(lines.length, 3);
-    expect(lines.first, startsWith('Species,Date,Time (from - to),Time,'));
+    expect(lines.first,
+        startsWith('csv_header.point,Species,Date,Time (from - to),Time,'));
 
     expect(lines[1], contains('Parus major'));
     expect(lines[1], contains('44.812345'));
     expect(lines[1], contains('20.361234'));
     expect(lines[1], contains('"pevanje, čučanje"'));
 
-    /// the bird columns keep their order and English headers — the sheets
-    /// built on this export expect them — and the shared transect, point
-    /// and photo columns (the record's, then the point's) follow; a photo name with a comma is quoted
+    /// the point number leads; the bird columns keep their order and English
+    /// headers — the sheets built on this export expect them — and the shared
+    /// transect and photo columns (the record's, then the point's) follow; a
+    /// photo name with a comma is quoted
+    expect(lines[1], startsWith('1,Parus major,'));
     expect(lines[1],
-        endsWith(',G,NNE,12,>100,SW,Test transekt,1,"$photo; weird, name.jpg",'));
+        endsWith(',G,NNE,12,>100,SW,Test transekt,"$photo; weird, name.jpg",'));
 
     /// a record with only the required fields must still line up
     expect(lines[2], contains('Sitta europaea'));
-    expect(lines[2], endsWith(',,,,,,Test transekt,1,,'));
+    expect(lines[2], startsWith('1,Sitta europaea,'));
+    expect(lines[2], endsWith(',,,,,,Test transekt,,'));
   });
 
   testWidgets('the share button labels are plain keys, not blocks',
