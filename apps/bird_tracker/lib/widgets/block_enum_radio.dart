@@ -37,9 +37,11 @@ class BlockEnumRadio extends StatelessWidget {
                   onChanged!(val);
                 }
               },
-              child: Wrap(
-                alignment: WrapAlignment.spaceEvenly,
-                runSpacing: 0,
+
+              /// one option per line, top to bottom like the heights they
+              /// stand for — a Wrap put two on a line once the block widened
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children:
                     enumValues
                         ?.map(
