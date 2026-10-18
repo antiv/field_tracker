@@ -382,7 +382,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     showTextInputDialog(
       'enter_transect_name'.tr(),
       'transect_name'.tr(),
-      '${'transect'.tr()} ${DateFormat('dd.MM.yyyy').format(DateTime.now())}',
+
+      /// a continued transect keeps the name it was saved under
+      transect?.name ??
+          '${'transect'.tr()} ${DateFormat('dd.MM.yyyy').format(DateTime.now())}',
       (name) async {
         await _stopListener();
 
@@ -608,6 +611,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   Future<void>? _transectStarting;
 
   Future<void> _doStartTransect() async {
+    /// a finished transect opened from the history can be continued — the
+    /// surveyor decides whether Start means that or a new transect
+    final viewed = transect;
+    if (viewed != null && viewed.endDate != null) {
+      _askContinueTransect(viewed);
+      return;
+    }
+
     /// only one transect may be active — an open one is always resumed,
     /// never replaced; a new one requires closing the old one via Stop
     if (transect != null && transect!.endDate == null) {
@@ -626,6 +637,69 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       }
     }
     if (mounted) setState(() {});
+  }
+
+  /// Continue the finished [viewed] transect, or start a new one. The dialog
+  /// is not awaited: dismissed with a tap outside, it answers neither, and
+  /// an awaited Start would then block every later one. [onContinued] runs
+  /// once the continued transect is recording — the add-point button opens
+  /// the point form with it.
+  void _askContinueTransect(Transect viewed, {VoidCallback? onContinued}) {
+    showYesNoDialog(
+      () async {
+        if (await _continueTransect(viewed)) onContinued?.call();
+      },
+      () async {
+        DataService().setTransect(null);
+        transect = null;
+        await _startTransect();
+      },
+      title: 'continue_transect'.tr(),
+      yesText: 'continue'.tr(),
+      noText: 'new_transect'.tr(),
+    );
+  }
+
+  /// Reopen a finished transect and record into it again. Only one transect
+  /// may be open, so any other one left open is closed first; if recording
+  /// cannot start (permission declined) the transect is finished again
+  /// rather than left open to be offered for resume on every launch.
+  Future<bool> _continueTransect(Transect viewed) async {
+    final previousEnd = viewed.endDate;
+    for (final open in await SembastService().getOpenTransects()) {
+      if (open.id != viewed.id) _closeTransect(open);
+    }
+    viewed.endDate = null;
+    transect = viewed;
+    DataService().setTransect(viewed);
+    await SembastService().updateTransect(viewed);
+
+    final started = await _startListener();
+    if (started) {
+      showSnackBar('transect_resumed'.tr());
+    } else if (transect == viewed) {
+      viewed.endDate = previousEnd;
+      await SembastService().updateTransect(viewed);
+    }
+    if (mounted) setState(() {});
+    return started;
+  }
+
+  /// The add-point button while nothing is recording: a transect on the map
+  /// — paused, or finished and opened from the history — is resumed first
+  /// and the point form follows; with none there is nothing to add to.
+  Future<void> _addMarkerWhenStopped() async {
+    final viewed = transect;
+    if (viewed == null) {
+      showSnackBar('start_transect_first'.tr());
+      return;
+    }
+    if (viewed.endDate != null) {
+      _askContinueTransect(viewed, onContinued: _addMarker);
+      return;
+    }
+    await _startTransect();
+    if (locationStream != null) _addMarker();
   }
 
   /// Permission first, row second: a transect that never recorded a point
@@ -845,7 +919,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             FloatingActionButton(
               onPressed: locationStream != null
                   ? _addMarker
-                  : () => showSnackBar('start_transect_first'.tr()),
+                  : _addMarkerWhenStopped,
               backgroundColor: Colors.orangeAccent,
               foregroundColor: Colors.white,
               child: const Icon(Icons.add_location_alt_outlined),
