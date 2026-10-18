@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -103,6 +104,48 @@ void main() {
     expect(DataService().transect, isNull);
     expect(tester.widget<SpeedDial>(find.byType(SpeedDial)).children, isEmpty);
     expect(tester.takeException(), isNull);
+  });
+
+  Transect finishedTransect() => Transect()
+    ..name = 'Stari transekt'
+    ..startDate = DateTime(2026, 10, 1, 8)
+    ..endDate = DateTime(2026, 10, 1, 10)
+    ..points = []
+    ..markers = [Placemark(id: 0, latitude: 44.81, longitude: 20.36)];
+
+  testWidgets('add point on a finished transect offers to continue it',
+      (tester) async {
+    await pumpHome(tester);
+    DataService().setTransect(finishedTransect());
+    await tester.pump();
+
+    /// it used to only say "start transect first", and Start then always
+    /// began a new transect — a stopped one could no longer be continued
+    await tester.tap(find.byIcon(Icons.add_location_alt_outlined));
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('continue_transect'.tr()), findsOneWidget);
+    expect(find.text('continue'.tr()), findsOneWidget);
+    expect(find.text('new_transect'.tr()), findsOneWidget);
+    expect(find.text('start_transect_first'.tr()), findsNothing);
+  });
+
+  testWidgets('Start on a finished transect asks before starting a new one',
+      (tester) async {
+    await pumpHome(tester);
+    DataService().setTransect(finishedTransect());
+    await tester.pump();
+
+    await tester.tap(find.byType(SpeedDial));
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('continue_transect'.tr()), findsOneWidget);
+  });
+
+  testWidgets('add point with no transect still asks for one', (tester) async {
+    await pumpHome(tester);
+    await tester.tap(find.byIcon(Icons.add_location_alt_outlined));
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('start_transect_first'.tr()), findsOneWidget);
+    expect(find.text('continue_transect'.tr()), findsNothing);
   });
 
   /// Not covered here: anything that needs a location fix. The dial's Stop
