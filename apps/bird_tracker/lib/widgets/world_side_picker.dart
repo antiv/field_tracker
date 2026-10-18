@@ -5,13 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 class WorldSidePicker extends StatefulWidget {
-  const WorldSidePicker(
-      {super.key,
-      this.selectedSide,
-      this.onChanged,
-      this.color,
-      this.radius,
-      this.label});
+  const WorldSidePicker({
+    super.key,
+    this.selectedSide,
+    this.onChanged,
+    this.color,
+    this.radius,
+    this.label,
+  });
 
   final Direction? selectedSide;
   final Function(dynamic)? onChanged;
@@ -43,10 +44,7 @@ class _WorldSidePickerState extends State<WorldSidePicker>
     );
 
     _entryRotationAnimation = Tween<double>(begin: -0.25, end: 0.0).animate(
-      CurvedAnimation(
-        parent: _entryController,
-        curve: Curves.easeOutBack,
-      ),
+      CurvedAnimation(parent: _entryController, curve: Curves.easeOutBack),
     );
 
     _entryController.forward();
@@ -67,20 +65,29 @@ class _WorldSidePickerState extends State<WorldSidePicker>
     return Direction.values.indexOf(side) * (2 * pi / 16);
   }
 
+  /// Room above the ring for the label and the clear button, so neither
+  /// covers the N point.
+  static const double _header = 14;
+
+  /// Distance of the direction points outside the ring, and the square each
+  /// one is centred in.
+  static const double _ring = 18;
+  static const double _slot = 30;
+
   @override
   Widget build(BuildContext context) {
     double radius = widget.radius ?? 80.0;
-    double size = (radius + 20) * 2 + 50;
+    double size = (radius + _ring) * 2 + _slot + 4;
     double rotationAngle = _getRotationAngle(widget.selectedSide);
 
     return SizedBox(
       width: size,
-      height: size,
+      height: size + _header,
       child: Stack(
         children: [
           // Background Compass Image
           Positioned(
-            top: size / 4,
+            top: _header + size / 4,
             left: size / 4,
             child: FadeTransition(
               opacity: _fadeAnimation,
@@ -100,35 +107,38 @@ class _WorldSidePickerState extends State<WorldSidePicker>
             ),
           ),
           // Circle Background
-          Positioned.fill(
+          Positioned(
+            top: _header,
+            left: 0,
+            width: size,
+            height: size,
             child: CustomPaint(
-              painter: CirclePainter(
-                  color: widget.color, radius: radius),
+              painter: CirclePainter(color: widget.color, radius: radius),
             ),
           ),
           // Direction Points
-          for (int i = 0; i < 16; i++)
-            _buildDirectionPoint(i, size, radius),
+          for (int i = 0; i < 16; i++) _buildDirectionPoint(i, size, radius),
 
           // Label
           Positioned(
-            left: 20,
-            top: 3,
+            left: 0,
+            top: 0,
             child: Container(
               padding: const EdgeInsets.only(left: 5, right: 5),
               color: Colors.white,
               child: Text(
-                  widget.label ??
-                      Direction.values.first.toString().split('.').first,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.grey,
-                      )),
+                widget.label ??
+                    Direction.values.first.toString().split('.').first,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+              ),
             ),
           ),
           // Clear Button
           Positioned(
-            right: 2,
-            top: 3,
+            right: 0,
+            top: 0,
             child: Container(
               color: Colors.white,
               child: SizedBox(
@@ -171,44 +181,64 @@ class _WorldSidePickerState extends State<WorldSidePicker>
     );
 
     return Positioned(
-      top: (size / 2) + (radius + 20) * sin(2 * pi * (i - 4) / 16) - 15,
-      left: (size / 2) + (radius + 20) * cos(2 * pi * (i - 4) / 16) - 15,
+      top:
+          _header +
+          (size / 2) +
+          (radius + _ring) * sin(2 * pi * (i - 4) / 16) -
+          _slot / 2,
+      left:
+          (size / 2) +
+          (radius + _ring) * cos(2 * pi * (i - 4) / 16) -
+          _slot / 2,
+      width: _slot,
+      height: _slot,
       child: ScaleTransition(
         scale: curve,
         child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onTap: () {
             if (widget.onChanged != null) {
               widget.onChanged!(direction);
             }
           },
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            width: isSelected ? 35 : 30,
-            height: isSelected ? 35 : 30,
-            decoration: BoxDecoration(
-              color: isSelected ? widget.color ?? const Color(0xFF0F9D58) : null,
-              borderRadius: BorderRadius.circular(isSelected ? 10 : 0),
-              boxShadow: isSelected
-                  ? [
-                      BoxShadow(
-                        color: (widget.color ?? const Color(0xFF0F9D58))
-                            .withValues(alpha: 0.4),
-                        blurRadius: 8,
-                        spreadRadius: 2,
-                      )
-                    ]
-                  : null,
-            ),
-            child: Center(
-              child: AnimatedDefaultTextStyle(
-                duration: const Duration(milliseconds: 300),
-                style: TextStyle(
-                  fontSize: direction.isSub() ? (isSelected ? 11 : 10) : (isSelected ? 13 : 12),
-                  fontWeight: direction.isSub() ? FontWeight.normal : FontWeight.bold,
-                  color: isSelected ? Colors.white : Colors.black,
-                ),
-                child: Text(
-                  direction.isSub() ? direction.toShortString().toLowerCase() : direction.toShortString(),
+          child: Center(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              width: isSelected ? 30 : 24,
+              height: isSelected ? 30 : 24,
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? widget.color ?? const Color(0xFF0F9D58)
+                    : null,
+                borderRadius: BorderRadius.circular(isSelected ? 8 : 0),
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: (widget.color ?? const Color(0xFF0F9D58))
+                              .withValues(alpha: 0.4),
+                          blurRadius: 8,
+                          spreadRadius: 2,
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Center(
+                child: AnimatedDefaultTextStyle(
+                  duration: const Duration(milliseconds: 300),
+                  style: TextStyle(
+                    fontSize: direction.isSub()
+                        ? (isSelected ? 11 : 10)
+                        : (isSelected ? 13 : 12),
+                    fontWeight: direction.isSub()
+                        ? FontWeight.normal
+                        : FontWeight.bold,
+                    color: isSelected ? Colors.white : Colors.black,
+                  ),
+                  child: Text(
+                    direction.isSub()
+                        ? direction.toShortString().toLowerCase()
+                        : direction.toShortString(),
+                  ),
                 ),
               ),
             ),

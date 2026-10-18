@@ -131,10 +131,10 @@ class _BirdFormFieldsState extends RecordFieldsState<BirdFormFields> {
                 _direction = val;
               }),
               color: Colors.green.shade700,
-              radius: 80,
+              radius: 56,
               label: 'direction_label'.tr(),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 8),
             Expanded(
               child: BlockEnumRadio(
                 key: ValueKey('stratification$_stratification'),
