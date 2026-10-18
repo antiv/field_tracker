@@ -53,6 +53,21 @@ class _MarkerInfoState extends State<MarkerInfo> {
     if (removed.isNotEmpty) MediaService().delete(removed);
   }
 
+  /// The whole point, records and all — the sheet closes with it. Its photos
+  /// stay on disk unless the user ticks the box, as everywhere else.
+  void _deletePoint() {
+    final point = widget.selected;
+    final active = DataService().transect;
+    if (point == null || active == null) return;
+    showDeleteWithPhotosDialog(point.photoNames, (_) {
+      active.markers = active.markers?.toList(growable: true) ?? [];
+      active.markers!.removeWhere((m) => m.id == point.id);
+      SembastService().updateTransect(active);
+      DataService().notify();
+      Navigator.of(ContextHolder.currentContext).pop();
+    }, title: 'delete_point_confirm'.tr());
+  }
+
   /// newest record first
   Widget _recordCard(BuildContext context, int index) {
     final speciesLength = widget.selected?.records?.length ?? 0;
@@ -131,10 +146,24 @@ class _MarkerInfoState extends State<MarkerInfo> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 8),
-                      Text(
-                        '${'point'.tr()} ${(widget.selected?.id ?? 0) + 1}',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '${'point'.tr()} ${(widget.selected?.id ?? 0) + 1}',
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          IconButton(
+                            key: const ValueKey('deletePoint'),
+                            icon: const Icon(Icons.delete_outline),
+                            color: Colors.red.shade700,
+                            tooltip: 'delete'.tr(),
+                            visualDensity: VisualDensity.compact,
+                            onPressed: _deletePoint,
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 4),
                       Row(

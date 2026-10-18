@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 
 class BlockEnumRadio extends StatelessWidget {
-  const BlockEnumRadio({super.key, this.enumValues, this.value, this.onChanged, this.customLabels, this.label});
+  const BlockEnumRadio({
+    super.key,
+    this.enumValues,
+    this.value,
+    this.onChanged,
+    this.customLabels,
+    this.label,
+  });
 
   final List<dynamic>? enumValues;
   final dynamic value;
@@ -22,7 +29,7 @@ class BlockEnumRadio extends StatelessWidget {
             borderRadius: BorderRadius.circular(15),
           ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20.0),
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
             child: RadioGroup<dynamic>(
               groupValue: value,
               onChanged: (dynamic val) {
@@ -30,11 +37,15 @@ class BlockEnumRadio extends StatelessWidget {
                   onChanged!(val);
                 }
               },
-              child: Wrap(
-                alignment: WrapAlignment.spaceEvenly,
-                runSpacing: 20,
-                children: enumValues
-                      ?.map((e) => InkWell(
+
+              /// one option per line, top to bottom like the heights they
+              /// stand for — a Wrap put two on a line once the block widened
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children:
+                    enumValues
+                        ?.map(
+                          (e) => InkWell(
                             onTap: () {
                               if (onChanged != null) {
                                 onChanged!(e);
@@ -45,15 +56,18 @@ class BlockEnumRadio extends StatelessWidget {
                               children: [
                                 Radio<dynamic>(
                                   value: e,
+                                  visualDensity: VisualDensity.compact,
                                 ),
-                                customLabels != null && customLabels!.containsKey(e)
+                                customLabels != null &&
+                                        customLabels!.containsKey(e)
                                     ? customLabels![e]!
                                     : Text(e.toString().split('.').last),
                               ],
                             ),
-                          ))
-                      .toList() ??
-                  [],
+                          ),
+                        )
+                        .toList() ??
+                    [],
               ),
             ),
           ),
@@ -64,10 +78,12 @@ class BlockEnumRadio extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.only(left: 5, right: 5),
             color: Colors.white,
-            child: Text(label ?? enumValues!.first.toString().split('.').first,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.grey,
-                    )),
+            child: Text(
+              label ?? enumValues!.first.toString().split('.').first,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+            ),
           ),
         ),
         Positioned(
